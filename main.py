@@ -428,6 +428,39 @@ class Plugin:
         except Exception as e:
             results["raw_request_error"] = str(e)
 
+        # Test 2: Try unauthenticated YTMusic to isolate auth vs request issue
+        try:
+            from ytmusicapi import YTMusic as YTM
+            ytm_unauth = YTM()
+            unauth_results = ytm_unauth.search("test", limit=1)
+            results["unauth_search"] = f"OK - {len(unauth_results)} results"
+        except Exception as e:
+            results["unauth_search"] = f"FAIL: {str(e)[:200]}"
+
+        # Test 3: Try without content-encoding header
+        try:
+            clean_headers = {k: v for k, v in headers.items() if k.lower() != 'content-encoding'}
+            resp2 = self.ytmusic._session.post(
+                url,
+                json=body,
+                headers=clean_headers,
+                proxies=self.ytmusic.proxies,
+                cookies=self.ytmusic.cookies,
+            )
+            results["no_gzip_status"] = resp2.status_code
+            if resp2.status_code < 400:
+                results["no_gzip"] = "OK - removing content-encoding fixed it!"
+            else:
+                try:
+                    results["no_gzip_error"] = resp2.json().get("error", {}).get("message", "")
+                except Exception:
+                    results["no_gzip_error"] = resp2.text[:200]
+        except Exception as e:
+            results["no_gzip_error"] = str(e)[:200]
+
+        # Test 4: Check visitor ID value
+        results["visitor_id"] = headers.get("X-Goog-Visitor-Id", "(not set)")
+
         decky.logger.info(f"API test results: {json.dumps(results, indent=2, default=str)}")
         return results
 
