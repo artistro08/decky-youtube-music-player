@@ -1,7 +1,8 @@
-import { ButtonItem, Tabs, staticClasses } from '@decky/ui';
+import { ButtonItem, Tabs, staticClasses, DialogButton, Focusable } from '@decky/ui';
 import { definePlugin } from '@decky/api';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { FaMusic } from 'react-icons/fa';
+import { IoSettingsSharp } from 'react-icons/io5';
 
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { NotConnectedView } from './components/NotConnectedView';
@@ -9,19 +10,16 @@ import { AuthTokenView } from './components/AuthTokenView';
 import { PlayerView } from './components/PlayerView';
 import { QueueView } from './components/QueueView';
 import { Section } from './components/Section';
+import { SettingsPage } from './components/SettingsPage';
 
 const TabsContainer = memo(() => {
   const [activeTab, setActiveTab] = useState<string>('player');
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number>(500);
 
-  // Height measurement — run once on mount. Also locks the outer scroll
-  // container (overflow-y: hidden) so touch-scrolling cannot move the entire
-  // plugin panel — only TabContentsScroll scrolls independently.
   useEffect(() => {
     if (!containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
-
     let scrollEl: HTMLElement | null = null;
     let el: Element | null = containerRef.current.parentElement;
     while (el && el !== document.documentElement) {
@@ -44,33 +42,27 @@ const TabsContainer = memo(() => {
     return () => { (scrollEl as HTMLElement).style.overflowY = prev; };
   }, []);
 
-  // Inject CSS on mount to fix tab bar layout and prevent touch scroll jank.
-  // Replaces the per-tab-switch querySelectorAll DOM patches.
   useEffect(() => {
     const el = document.createElement('style');
     el.textContent = `
-      /* Cascade flex-column through Decky's wrapper between our div and Tabs DOM. */
       #ytm-container > * {
         height: 100%;
         display: flex;
         flex-direction: column;
         min-height: 0;
       }
-      /* Tab bar: scoped, never shrinks. */
       #ytm-container [class*="TabHeaderRowWrapper"] {
         flex-shrink: 0 !important;
         min-height: 32px !important;
         padding-left: 18px !important;
         padding-right: 18px !important;
       }
-      /* Content scroll area: scoped, takes remaining height. overflow-y left alone. */
       #ytm-container [class*="TabContentsScroll"] {
         flex: 1 !important;
         min-height: 0 !important;
         padding-left: 0 !important;
         padding-right: 0 !important;
       }
-      /* L1/R1 glyph icons: scoped. */
       #ytm-container [class*="Glyphs"] {
         transform: scale(0.65) !important;
         transform-origin: center center !important;
@@ -80,8 +72,6 @@ const TabsContainer = memo(() => {
     return () => el.remove();
   }, []);
 
-  // Memoize tab content so @decky/ui's Tabs sees a stable array reference
-  // and does not unmount/remount content on every re-render.
   const tabItems = useMemo(() => [
     { id: 'player', title: 'Player', content: <PlayerView /> },
     { id: 'queue', title: 'Queue', content: <QueueView /> },
@@ -99,9 +89,39 @@ const TabsContainer = memo(() => {
 });
 TabsContainer.displayName = 'TabsContainer';
 
-const PluginContent = () => {
+// Module-scoped ref for settings toggle — accessible from titleView
+let setShowSettingsGlobal: ((show: boolean) => void) | null = null;
+
+const Content = () => {
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Register the global setter so titleView can toggle it
+  useEffect(() => {
+    setShowSettingsGlobal = setShowSettings;
+    return () => { setShowSettingsGlobal = null; };
+  }, []);
+
+  useEffect(() => {
+    const titleEl = document.querySelector(`.${staticClasses.Title}`);
+    if (titleEl?.parentElement) {
+      titleEl.parentElement.style.gap = '0';
+    }
+  }, []);
+
+  return (
+    <PlayerProvider>
+      <PluginContentWrapper showSettings={showSettings} setShowSettings={setShowSettings} />
+    </PlayerProvider>
+  );
+};
+
+const PluginContentWrapper = ({ showSettings, setShowSettings }: { showSettings: boolean; setShowSettings: (v: boolean) => void }) => {
   const { connected, authRequired } = usePlayer();
   const [activeTab, setActiveTab] = useState<string>('player');
+
+  if (showSettings) {
+    return <SettingsPage onBack={() => setShowSettings(false)} />;
+  }
 
   if (!connected) return <NotConnectedView />;
   if (authRequired) return <AuthTokenView />;
@@ -127,23 +147,24 @@ const PluginContent = () => {
   return <TabsContainer />;
 };
 
-const Content = () => {
-  useEffect(() => {
-    const titleEl = document.querySelector(`.${staticClasses.Title}`);
-    if (titleEl?.parentElement) {
-      titleEl.parentElement.style.gap = '0';
-    }
-  }, []);
-  return (
-    <PlayerProvider>
-      <PluginContent />
-    </PlayerProvider>
-  );
-};
-
 export default definePlugin(() => ({
   name: 'YouTube Music',
-  titleView: <div className={staticClasses.Title} style={{ paddingTop: '0', boxShadow: 'none' }}>YouTube Music</div>,
+  titleView: (
+    <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '0' }}>
+      <div className={staticClasses.Title} style={{ paddingTop: '0', boxShadow: 'none', flex: 1 }}>YouTube Music</div>
+      <DialogButton
+        style={{
+          width: '32px', minWidth: '32px', height: '32px', padding: '0',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'transparent',
+        }}
+        onClick={() => setShowSettingsGlobal?.(true)}
+        onOKActionDescription="Settings"
+      >
+        <IoSettingsSharp size={18} />
+      </DialogButton>
+    </Focusable>
+  ),
   content: <Content />,
   icon: <FaMusic />,
   onDismount() {},
