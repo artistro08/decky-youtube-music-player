@@ -1,0 +1,11 @@
+{
+  "name": "YouTube Music",
+  "author": "artistro08",
+  "flags": ["debug"],
+  "api_version": 1,
+  "publish": {
+    "tags": ["music", "youtube"],
+    "description": "Control YouTube Music (th-ch/youtube-music) from your Steam Deck sidebar.",
+    "image": ""
+  }
+}
