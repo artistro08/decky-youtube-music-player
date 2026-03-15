@@ -367,3 +367,77 @@ class Plugin:
         cycle = {"NONE": "ALL", "ALL": "ONE", "ONE": "NONE"}
         self.repeat = cycle.get(self.repeat, "NONE")
         return {"repeat": self.repeat}
+
+    # ── Temporary: load playlist for testing (will be replaced by Library tab) ──
+
+    async def load_playlist(self, playlist_id):
+        """Load a playlist into the queue and return the first track."""
+        if not self.ytmusic:
+            return {"error": "Not authenticated"}
+
+        try:
+            if playlist_id == "LM":
+                playlist_data = self.ytmusic.get_liked_songs(limit=50)
+            else:
+                playlist_data = self.ytmusic.get_playlist(playlist_id, limit=50)
+
+            tracks = playlist_data.get("tracks", [])
+            if not tracks:
+                return {"error": "Playlist is empty"}
+
+            self.queue = []
+            for t in tracks:
+                thumbnails = t.get("thumbnails", [])
+                album_art = thumbnails[-1]["url"] if thumbnails else ""
+
+                artists = t.get("artists", [])
+                artist_name = ", ".join(a.get("name", "") for a in artists) if artists else ""
+
+                album = t.get("album")
+                album_name = album.get("name", "") if album else ""
+
+                duration_seconds = t.get("duration_seconds", 0)
+                if not duration_seconds:
+                    duration_str = t.get("duration", "0:00")
+                    parts = duration_str.split(":")
+                    try:
+                        if len(parts) == 2:
+                            duration_seconds = int(parts[0]) * 60 + int(parts[1])
+                        elif len(parts) == 3:
+                            duration_seconds = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                    except ValueError:
+                        duration_seconds = 0
+
+                self.queue.append({
+                    "videoId": t.get("videoId", ""),
+                    "title": t.get("title", "Unknown"),
+                    "artist": artist_name,
+                    "album": album_name,
+                    "albumArt": album_art,
+                    "duration": duration_seconds,
+                })
+
+            self.queue = [t for t in self.queue if t["videoId"]]
+
+            if not self.queue:
+                return {"error": "No playable tracks in playlist"}
+
+            self.queue_position = 0
+
+            if self.shuffle:
+                self.shuffle_order = list(range(len(self.queue)))
+                random.shuffle(self.shuffle_order)
+                self.shuffle_order.remove(0)
+                self.shuffle_order.insert(0, 0)
+            else:
+                self.shuffle_order = []
+
+            result = self._current_track_with_url()
+            if result is None or result.get("url") is None:
+                return {"error": "Failed to get streaming URL for first track"}
+
+            self.is_playing = True
+            return result
+        except Exception as e:
+            decky.logger.error(f"Failed to load playlist {playlist_id}: {e}")
+            return {"error": str(e)}

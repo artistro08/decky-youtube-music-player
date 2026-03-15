@@ -1,5 +1,5 @@
 import { ButtonItem, Tabs, staticClasses, DialogButton, Focusable, Navigation } from '@decky/ui';
-import { definePlugin, routerHook } from '@decky/api';
+import { definePlugin, routerHook, call } from '@decky/api';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { FaMusic } from 'react-icons/fa';
 import { BsGearFill } from 'react-icons/bs';
@@ -9,7 +9,7 @@ import { PlayerView } from './components/PlayerView';
 import { QueueView } from './components/QueueView';
 import { Section } from './components/Section';
 import { SettingsPage } from './components/SettingsPage';
-import { initAudio, destroyAudio } from './services/audioManager';
+import { initAudio, destroyAudio, playTrack, type TrackInfo } from './services/audioManager';
 
 const SETTINGS_ROUTE = '/youtube-music-settings';
 
@@ -128,6 +128,18 @@ const PluginContentWrapper = () => {
     );
   }
 
+  // Temporary: test button to load Liked Songs (removed in Phase 6 when Library tab exists)
+  const handleLoadLikedSongs = async () => {
+    try {
+      const result = await call<[string], TrackInfo & { error?: string }>('load_playlist', 'LM');
+      if (!result.error && result.url) {
+        await playTrack(result);
+      }
+    } catch (e) {
+      console.error('[YTM] Failed to load liked songs:', e);
+    }
+  };
+
   if (!Tabs) {
     return (
       <>
@@ -146,7 +158,17 @@ const PluginContentWrapper = () => {
     );
   }
 
-  return <TabsContainer />;
+  return (
+    <>
+      {/* Temporary test button — removed when Library tab is added in Phase 6 */}
+      <Section>
+        <ButtonItem onClick={() => { void handleLoadLikedSongs(); }}>
+          Load Liked Songs (test)
+        </ButtonItem>
+      </Section>
+      <TabsContainer />
+    </>
+  );
 };
 
 const onSettingsClick = () => {
