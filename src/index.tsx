@@ -1,8 +1,8 @@
-import { ButtonItem, Tabs, staticClasses, DialogButton, Focusable } from '@decky/ui';
-import { definePlugin } from '@decky/api';
+import { ButtonItem, Tabs, staticClasses, DialogButton, Focusable, Navigation } from '@decky/ui';
+import { definePlugin, routerHook } from '@decky/api';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { FaMusic } from 'react-icons/fa';
-import { IoSettingsSharp } from 'react-icons/io5';
+import { BsGearFill } from 'react-icons/bs';
 
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { NotConnectedView } from './components/NotConnectedView';
@@ -11,6 +11,8 @@ import { PlayerView } from './components/PlayerView';
 import { QueueView } from './components/QueueView';
 import { Section } from './components/Section';
 import { SettingsPage } from './components/SettingsPage';
+
+const SETTINGS_ROUTE = '/youtube-music-settings';
 
 const TabsContainer = memo(() => {
   const [activeTab, setActiveTab] = useState<string>('player');
@@ -89,18 +91,7 @@ const TabsContainer = memo(() => {
 });
 TabsContainer.displayName = 'TabsContainer';
 
-// Module-scoped ref for settings toggle — accessible from titleView
-let setShowSettingsGlobal: ((show: boolean) => void) | null = null;
-
 const Content = () => {
-  const [showSettings, setShowSettings] = useState(false);
-
-  // Register the global setter so titleView can toggle it
-  useEffect(() => {
-    setShowSettingsGlobal = setShowSettings;
-    return () => { setShowSettingsGlobal = null; };
-  }, []);
-
   useEffect(() => {
     const titleEl = document.querySelector(`.${staticClasses.Title}`);
     if (titleEl?.parentElement) {
@@ -110,18 +101,14 @@ const Content = () => {
 
   return (
     <PlayerProvider>
-      <PluginContentWrapper showSettings={showSettings} setShowSettings={setShowSettings} />
+      <PluginContentWrapper />
     </PlayerProvider>
   );
 };
 
-const PluginContentWrapper = ({ showSettings, setShowSettings }: { showSettings: boolean; setShowSettings: (v: boolean) => void }) => {
+const PluginContentWrapper = () => {
   const { connected, authRequired } = usePlayer();
   const [activeTab, setActiveTab] = useState<string>('player');
-
-  if (showSettings) {
-    return <SettingsPage onBack={() => setShowSettings(false)} />;
-  }
 
   if (!connected) return <NotConnectedView />;
   if (authRequired) return <AuthTokenView />;
@@ -147,25 +134,43 @@ const PluginContentWrapper = ({ showSettings, setShowSettings }: { showSettings:
   return <TabsContainer />;
 };
 
-export default definePlugin(() => ({
-  name: 'YouTube Music',
-  titleView: (
-    <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '0' }}>
-      <div className={staticClasses.Title} style={{ paddingTop: '0', boxShadow: 'none', flex: 1 }}>YouTube Music</div>
-      <DialogButton
+const onSettingsClick = () => {
+  Navigation.CloseSideMenus();
+  Navigation.Navigate(SETTINGS_ROUTE);
+};
+
+export default definePlugin(() => {
+  // Register the settings route as a full-screen page
+  routerHook.addRoute(SETTINGS_ROUTE, () => <SettingsPage />);
+
+  return {
+    name: 'YouTube Music',
+    titleView: (
+      <Focusable
         style={{
-          width: '32px', minWidth: '32px', height: '32px', padding: '0',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'transparent',
+          display: 'flex',
+          padding: '0',
+          width: '100%',
+          boxShadow: 'none',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}
-        onClick={() => setShowSettingsGlobal?.(true)}
-        onOKActionDescription="Settings"
+        className={staticClasses.Title}
       >
-        <IoSettingsSharp size={18} />
-      </DialogButton>
-    </Focusable>
-  ),
-  content: <Content />,
-  icon: <FaMusic />,
-  onDismount() {},
-}));
+        <div>YouTube Music</div>
+        <DialogButton
+          style={{ height: '28px', width: '40px', minWidth: 0, padding: '10px 12px' }}
+          onClick={onSettingsClick}
+          onOKActionDescription="Settings"
+        >
+          <BsGearFill style={{ marginTop: '-4px', display: 'block' }} />
+        </DialogButton>
+      </Focusable>
+    ),
+    content: <Content />,
+    icon: <FaMusic />,
+    onDismount() {
+      routerHook.removeRoute(SETTINGS_ROUTE);
+    },
+  };
+});

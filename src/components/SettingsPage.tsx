@@ -1,4 +1,4 @@
-import { ButtonItem, DialogButton, TextField, Focusable } from '@decky/ui';
+import { ButtonItem, DialogButton, TextField, Focusable, Navigation } from '@decky/ui';
 import { call } from '@decky/api';
 import { useEffect, useRef, useState } from 'react';
 import { Section } from './Section';
@@ -21,7 +21,7 @@ type OAuthCheckResult = {
   message?: string;
 };
 
-export const SettingsPage = ({ onBack }: { onBack: () => void }) => {
+export const SettingsPage = () => {
   const [authState, setAuthState] = useState<AuthState | null>(null);
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -124,11 +124,11 @@ export const SettingsPage = ({ onBack }: { onBack: () => void }) => {
       <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', gap: '8px' }}>
         <DialogButton
           style={{ width: '40px', minWidth: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={onBack}
+          onClick={() => Navigation.NavigateBack()}
         >
           ←
         </DialogButton>
-        <span style={{ fontWeight: 'bold', fontSize: '16px' }}>Settings</span>
+        <span style={{ fontWeight: 'bold', fontSize: '16px' }}>YouTube Music Settings</span>
       </Focusable>
 
       {/* Error display */}
