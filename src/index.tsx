@@ -128,15 +128,48 @@ const PluginContentWrapper = () => {
     );
   }
 
-  // Temporary: test button to load Liked Songs (removed in Phase 6 when Library tab exists)
+  const [testResults, setTestResults] = useState<Record<string, unknown> | null>(null);
+  const [testLoading, setTestLoading] = useState(false);
+
+  // Temporary: diagnostic test
+  const handleTestApi = async () => {
+    setTestLoading(true);
+    setTestResults(null);
+    try {
+      const result = await call<[], Record<string, unknown>>('test_api');
+      setTestResults(result);
+    } catch (e) {
+      setTestResults({ error: String(e) });
+    }
+    setTestLoading(false);
+  };
+
+  // Temporary: test button to load a playlist
   const handleLoadLikedSongs = async () => {
     try {
       const result = await call<[string], TrackInfo & { error?: string }>('load_playlist', 'LM');
       if (!result.error && result.url) {
         await playTrack(result);
+      } else {
+        setTestResults({ load_error: result.error || 'No URL returned' });
       }
     } catch (e) {
-      console.error('[YTM] Failed to load liked songs:', e);
+      setTestResults({ load_error: String(e) });
+    }
+  };
+
+  // Load a specific playlist by ID from test results
+  const handleLoadPlaylist = async (playlistId: string) => {
+    try {
+      const result = await call<[string], TrackInfo & { error?: string }>('load_playlist', playlistId);
+      if (!result.error && result.url) {
+        await playTrack(result);
+        setTestResults(null);
+      } else {
+        setTestResults({ load_error: result.error || 'No URL returned' });
+      }
+    } catch (e) {
+      setTestResults({ load_error: String(e) });
     }
   };
 
@@ -160,11 +193,24 @@ const PluginContentWrapper = () => {
 
   return (
     <>
-      {/* Temporary test button — removed when Library tab is added in Phase 6 */}
+      {/* Temporary test buttons — removed when Library tab is added in Phase 6 */}
       <Section>
-        <ButtonItem onClick={() => { void handleLoadLikedSongs(); }}>
-          Load Liked Songs (test)
+        <ButtonItem onClick={() => { void handleTestApi(); }}>
+          {testLoading ? 'Testing...' : 'Test API'}
         </ButtonItem>
+        <ButtonItem onClick={() => { void handleLoadLikedSongs(); }}>
+          Load Liked Songs
+        </ButtonItem>
+        {testResults && (
+          <div style={{ padding: '8px 12px', fontSize: '10px', color: 'var(--gpSystemLighterGrey)', whiteSpace: 'pre-wrap', maxHeight: '200px', overflow: 'auto' }}>
+            {JSON.stringify(testResults, null, 2)}
+            {testResults.first_playlist ? (
+              <ButtonItem onClick={() => { void handleLoadPlaylist(String((testResults.first_playlist as Record<string, unknown>).playlistId)); }}>
+                {'Load: ' + String((testResults.first_playlist as Record<string, unknown>).title)}
+              </ButtonItem>
+            ) : null}
+          </div>
+        )}
       </Section>
       <TabsContainer />
     </>

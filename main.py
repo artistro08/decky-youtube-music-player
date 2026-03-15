@@ -368,6 +368,65 @@ class Plugin:
         self.repeat = cycle.get(self.repeat, "NONE")
         return {"repeat": self.repeat}
 
+    # ── Diagnostic: test which ytmusicapi methods work ──
+
+    async def test_api(self):
+        """Test various ytmusicapi methods to find what works."""
+        if not self.ytmusic:
+            return {"error": "Not authenticated"}
+
+        results = {}
+
+        # Test 1: search
+        try:
+            search_results = self.ytmusic.search("music", limit=1)
+            results["search"] = f"OK - found {len(search_results)} results"
+            if search_results:
+                results["search_first"] = {
+                    "title": search_results[0].get("title", ""),
+                    "videoId": search_results[0].get("videoId", ""),
+                    "resultType": search_results[0].get("resultType", ""),
+                }
+        except Exception as e:
+            results["search"] = f"FAIL: {e}"
+
+        # Test 2: get_library_playlists
+        try:
+            playlists = self.ytmusic.get_library_playlists(limit=5)
+            results["library_playlists"] = f"OK - found {len(playlists)} playlists"
+            if playlists:
+                results["first_playlist"] = {
+                    "title": playlists[0].get("title", ""),
+                    "playlistId": playlists[0].get("playlistId", ""),
+                }
+        except Exception as e:
+            results["library_playlists"] = f"FAIL: {e}"
+
+        # Test 3: get_liked_songs
+        try:
+            liked = self.ytmusic.get_liked_songs(limit=1)
+            results["liked_songs"] = f"OK - {liked.get('trackCount', '?')} tracks"
+        except Exception as e:
+            results["liked_songs"] = f"FAIL: {e}"
+
+        # Test 4: get_song with a known videoId (if search worked)
+        test_video_id = results.get("search_first", {}).get("videoId", "")
+        if test_video_id:
+            try:
+                song_data = self.ytmusic.get_song(test_video_id)
+                streaming = song_data.get("streamingData", {})
+                formats = streaming.get("adaptiveFormats", [])
+                audio_formats = [f for f in formats if f.get("mimeType", "").startswith("audio/")]
+                has_url = any(f.get("url") for f in audio_formats)
+                results["get_song"] = f"OK - {len(audio_formats)} audio formats, has_url={has_url}"
+                if audio_formats and audio_formats[0].get("url"):
+                    results["streaming_url_sample"] = audio_formats[0]["url"][:100] + "..."
+            except Exception as e:
+                results["get_song"] = f"FAIL: {e}"
+
+        decky.logger.info(f"API test results: {json.dumps(results, indent=2)}")
+        return results
+
     # ── Temporary: load playlist for testing (will be replaced by Library tab) ──
 
     async def load_playlist(self, playlist_id):
