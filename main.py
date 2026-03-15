@@ -120,29 +120,47 @@ class Plugin:
             creds = self.oauth_pending["credentials"]
             code_response = self.oauth_pending["code_response"]
 
-            token = creds.token_from_code(code_response["device_code"])
+            # token_from_code() returns a plain dict (response.json()).
+            # If user hasn't authorized yet, Google returns {"error": "authorization_pending"}.
+            # If authorized, returns {"access_token": "...", "refresh_token": "...", ...}.
+            raw_token = creds.token_from_code(code_response["device_code"])
 
-            if token:
-                # Save the OAuth token
-                os.makedirs(decky.DECKY_PLUGIN_SETTINGS_DIR, exist_ok=True)
-                token_data = token.as_dict() if hasattr(token, 'as_dict') else token
-                with open(OAUTH_FILE, "w") as f:
-                    json.dump(token_data, f)
-
-                # Initialize ytmusicapi
-                self._try_init_ytmusic()
-                self.oauth_pending = None
-
-                if self.authenticated:
-                    await decky.emit("auth_complete")
-                    return {"status": "authenticated"}
+            # Check if Google returned an error (user hasn't completed auth yet)
+            if "error" in raw_token:
+                error_type = raw_token["error"]
+                if error_type in ("authorization_pending", "slow_down"):
+                    return {"status": "pending"}
                 else:
-                    return {"status": "error", "message": "Token saved but initialization failed"}
-            else:
+                    decky.logger.error(f"OAuth token error: {error_type}")
+                    self.oauth_pending = None
+                    return {"status": "error", "message": raw_token.get("error_description", error_type)}
+
+            # Valid token received — build a RefreshingToken the same way
+            # ytmusicapi's own prompt_for_token() does it
+            if "access_token" not in raw_token:
                 return {"status": "pending"}
+
+            from ytmusicapi.auth.oauth import RefreshingToken
+            ref_token = RefreshingToken(credentials=creds, **raw_token)
+            ref_token.update(ref_token.as_dict())  # compute expires_at
+
+            # Save using ytmusicapi's own store_token method
+            from pathlib import Path
+            os.makedirs(decky.DECKY_PLUGIN_SETTINGS_DIR, exist_ok=True)
+            ref_token.store_token(Path(OAUTH_FILE))
+
+            # Initialize ytmusicapi
+            self._try_init_ytmusic()
+            self.oauth_pending = None
+
+            if self.authenticated:
+                await decky.emit("auth_complete")
+                return {"status": "authenticated"}
+            else:
+                return {"status": "error", "message": "Token saved but initialization failed"}
         except Exception as e:
             error_msg = str(e)
-            # "authorization_pending" is expected while user hasn't completed flow
+            # Catch any remaining authorization_pending exceptions
             if "authorization_pending" in error_msg.lower():
                 return {"status": "pending"}
             decky.logger.error(f"OAuth check error: {e}")
