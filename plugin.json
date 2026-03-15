@@ -5,7 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["music", "youtube"],
-    "description": "Control YouTube Music (th-ch/youtube-music) from your Steam Deck sidebar.",
+    "description": "Play YouTube Music directly on your Steam Deck — no external app required.",
     "image": ""
   }
 }

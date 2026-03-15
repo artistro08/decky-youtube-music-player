@@ -1,7 +1,7 @@
 {
   "name": "decky-youtube-music",
-  "version": "0.0.2",
-  "description": "A Decky Loader plugin to control YouTube Music (th-ch/youtube-music) from the Steam Deck sidebar.",
+  "version": "0.1.0",
+  "description": "A standalone Decky Loader plugin to play YouTube Music directly on your Steam Deck.",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
