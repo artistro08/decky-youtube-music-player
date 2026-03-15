@@ -2,6 +2,7 @@ import decky
 import json
 import os
 import asyncio
+import random
 
 SETTINGS_FILE = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "settings.json")
 OAUTH_FILE = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "oauth.json")
@@ -12,6 +13,15 @@ class Plugin:
     authenticated = False
     ytmusic = None
     oauth_pending = None  # holds pending OAuth state
+
+    # Queue / playback state
+    queue = []              # list of dicts: { videoId, title, artist, album, albumArt, duration }
+    queue_position = 0
+    is_playing = False
+    shuffle = False
+    shuffle_order = []
+    repeat = "NONE"         # NONE | ALL | ONE
+    volume = 1.0
 
     def _load_settings(self):
         """Load saved credentials from disk."""
@@ -175,3 +185,185 @@ class Plugin:
             os.remove(OAUTH_FILE)
         decky.logger.info("Signed out")
         return {"success": True}
+
+    # ── Streaming URL ──────────────────────────────────────────────
+
+    def _get_streaming_url(self, video_id):
+        """Fetch the best audio streaming URL for a video."""
+        if not self.ytmusic:
+            return None
+        try:
+            song_data = self.ytmusic.get_song(video_id)
+            streaming_data = song_data.get("streamingData", {})
+            adaptive_formats = streaming_data.get("adaptiveFormats", [])
+
+            # Filter audio-only formats
+            audio_formats = [f for f in adaptive_formats if f.get("mimeType", "").startswith("audio/")]
+
+            if not audio_formats:
+                decky.logger.warning(f"No audio formats found for {video_id}")
+                return None
+
+            # Prefer audio/mp4, then audio/webm, highest bitrate first
+            mp4_formats = [f for f in audio_formats if "mp4" in f.get("mimeType", "")]
+            webm_formats = [f for f in audio_formats if "webm" in f.get("mimeType", "")]
+
+            candidates = mp4_formats or webm_formats or audio_formats
+            candidates.sort(key=lambda f: f.get("bitrate", 0), reverse=True)
+
+            url = candidates[0].get("url")
+            if not url:
+                decky.logger.warning(f"No URL in format for {video_id}")
+                return None
+
+            return url
+        except Exception as e:
+            decky.logger.error(f"Failed to get streaming URL for {video_id}: {e}")
+            return None
+
+    def _current_track_with_url(self):
+        """Return current track metadata + fresh streaming URL."""
+        if not self.queue or self.queue_position >= len(self.queue):
+            return None
+
+        track = self.queue[self.queue_position]
+        url = self._get_streaming_url(track["videoId"])
+
+        return {
+            "videoId": track["videoId"],
+            "title": track.get("title", ""),
+            "artist": track.get("artist", ""),
+            "album": track.get("album", ""),
+            "albumArt": track.get("albumArt", ""),
+            "duration": track.get("duration", 0),
+            "url": url,
+            "queuePosition": self.queue_position,
+            "queueLength": len(self.queue),
+        }
+
+    # ── Playback controls ──────────────────────────────────────────
+
+    async def get_current_track(self):
+        """Return current track with fresh streaming URL."""
+        result = self._current_track_with_url()
+        if result is None:
+            return {"error": "No track in queue"}
+        if result["url"] is None:
+            return {"error": "Failed to get streaming URL"}
+        return result
+
+    async def resume(self):
+        """Update internal playing state."""
+        self.is_playing = True
+        return {"success": True}
+
+    async def pause(self):
+        """Update internal paused state."""
+        self.is_playing = False
+        return {"success": True}
+
+    def _advance_queue(self, direction=1):
+        """Advance queue position. direction: 1=next, -1=previous.
+        Returns track with URL, or None if playback should stop."""
+        if not self.queue:
+            return None
+
+        if self.repeat == "ONE":
+            return self._current_track_with_url()
+
+        if self.shuffle and self.shuffle_order:
+            try:
+                shuffle_idx = self.shuffle_order.index(self.queue_position)
+            except ValueError:
+                shuffle_idx = 0
+            shuffle_idx += direction
+
+            if shuffle_idx >= len(self.shuffle_order):
+                if self.repeat == "ALL":
+                    shuffle_idx = 0
+                else:
+                    self.is_playing = False
+                    return None
+            elif shuffle_idx < 0:
+                if self.repeat == "ALL":
+                    shuffle_idx = len(self.shuffle_order) - 1
+                else:
+                    shuffle_idx = 0
+
+            self.queue_position = self.shuffle_order[shuffle_idx]
+        else:
+            self.queue_position += direction
+
+            if self.queue_position >= len(self.queue):
+                if self.repeat == "ALL":
+                    self.queue_position = 0
+                else:
+                    self.queue_position = len(self.queue) - 1
+                    self.is_playing = False
+                    return None
+            elif self.queue_position < 0:
+                if self.repeat == "ALL":
+                    self.queue_position = len(self.queue) - 1
+                else:
+                    self.queue_position = 0
+
+        self.is_playing = True
+        return self._current_track_with_url()
+
+    async def next_track(self):
+        """Advance to next track in queue."""
+        result = self._advance_queue(1)
+        if result is None:
+            return {"stopped": True}
+        if result.get("url") is None:
+            return {"error": "Failed to get streaming URL"}
+        return result
+
+    async def previous_track(self):
+        """Go to previous track in queue."""
+        result = self._advance_queue(-1)
+        if result is None:
+            return {"stopped": True}
+        if result.get("url") is None:
+            return {"error": "Failed to get streaming URL"}
+        return result
+
+    async def track_ended(self):
+        """Called by frontend when <audio> fires 'ended'. Same as next_track."""
+        return await self.next_track()
+
+    async def get_playback_state(self):
+        """Return full playback state for frontend sync on panel open."""
+        track = None
+        if self.queue and self.queue_position < len(self.queue):
+            track = self.queue[self.queue_position]
+        return {
+            "is_playing": self.is_playing,
+            "shuffle": self.shuffle,
+            "repeat": self.repeat,
+            "volume": self.volume,
+            "queue_position": self.queue_position,
+            "queue_length": len(self.queue),
+            "current_track": track,
+        }
+
+    # ── Shuffle / Repeat ───────────────────────────────────────────
+
+    async def toggle_shuffle(self):
+        """Toggle shuffle mode. Regenerate shuffle order if enabling."""
+        self.shuffle = not self.shuffle
+        if self.shuffle and self.queue:
+            self.shuffle_order = list(range(len(self.queue)))
+            random.shuffle(self.shuffle_order)
+            if self.queue_position in self.shuffle_order:
+                self.shuffle_order.remove(self.queue_position)
+                self.shuffle_order.insert(0, self.queue_position)
+        else:
+            self.shuffle_order = []
+        return {"shuffle": self.shuffle}
+
+    async def toggle_repeat(self):
+        """Cycle repeat mode: NONE -> ALL -> ONE -> NONE."""
+        cycle = {"NONE": "ALL", "ALL": "ONE", "ONE": "NONE"}
+        self.repeat = cycle.get(self.repeat, "NONE")
+        return {"repeat": self.repeat}
