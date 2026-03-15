@@ -108,6 +108,8 @@ const Content = () => {
 const PluginContentWrapper = () => {
   const { authenticated } = usePlayer();
   const [activeTab, setActiveTab] = useState<string>('player');
+  const [testResults, setTestResults] = useState<Record<string, unknown> | null>(null);
+  const [testLoading, setTestLoading] = useState(false);
 
   // If not authenticated, prompt user to go to settings
   if (!authenticated) {
@@ -127,9 +129,6 @@ const PluginContentWrapper = () => {
       </Section>
     );
   }
-
-  const [testResults, setTestResults] = useState<Record<string, unknown> | null>(null);
-  const [testLoading, setTestLoading] = useState(false);
 
   // Temporary: diagnostic test
   const handleTestApi = async () => {
