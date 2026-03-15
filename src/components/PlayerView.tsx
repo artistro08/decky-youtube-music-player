@@ -1,20 +1,14 @@
 import { ButtonItem, DialogButton, Focusable, ToggleField } from '@decky/ui';
+import { call } from '@decky/api';
 import { useEffect, useRef, useState } from 'react';
 import { FaPause, FaRandom, FaMusic } from 'react-icons/fa';
 import { IoPlay, IoPlaySkipBack, IoPlaySkipForward } from 'react-icons/io5';
 import { MdRepeat, MdRepeatOne } from 'react-icons/md';
 import { usePlayer } from '../context/PlayerContext';
-import {
-  next,
-  previous,
-  shuffle,
-  switchRepeat,
-  togglePlay,
-} from '../services/apiClient';
+import { togglePlayback, playNext, playPrevious } from '../services/audioManager';
 import { Section } from './Section';
 import { VolumeSlider } from './VolumeSlider';
 
-const REPEAT_NEXT: Record<string, number> = { NONE: 1, ALL: 1, ONE: 1 };
 const REPEAT_ICONS: Record<string, React.ReactElement> = {
   NONE: <MdRepeat size={18} style={{ opacity: 0.4, margin: '-2px' }} />,
   ALL:  <MdRepeat size={18} style={{ opacity: 1, margin: '-2px' }} />,
@@ -41,8 +35,6 @@ const transBtnFirst: React.CSSProperties = { ...btnBase, height: '35px', borderR
 const transBtnMid: React.CSSProperties   = { ...btnBase, height: '35px', borderRadius: '0', borderLeft: '1px solid rgba(255,255,255,0.15)' };
 const transBtnLast: React.CSSProperties  = { ...btnBase, height: '35px', borderRadius: '0 4px 4px 0', borderLeft: '1px solid rgba(255,255,255,0.15)' };
 
-// Applies padding to Decky item elements (buttons, toggles) and removes
-// hardcoded min-width (270px) by finding the offending element at mount.
 const applyInnerPadding = (el: HTMLElement) => {
   el.style.paddingLeft = '19px';
   el.style.paddingRight = '19px';
@@ -72,6 +64,10 @@ const RepeatButton = ({ repeat }: { repeat: string }) => {
     return () => el.remove();
   }, []);
 
+  const handleRepeatToggle = async () => {
+    await call('toggle_repeat');
+  };
+
   return (
     <Focusable
       onFocus={() => setFocused(true)}
@@ -92,7 +88,7 @@ const RepeatButton = ({ repeat }: { repeat: string }) => {
           animation: focused ? 'ytm-repeat-focus 0.3s ease' : 'none',
           transition: 'background 0.2s ease',
         }}
-        onClick={() => { void switchRepeat(REPEAT_NEXT[repeat] ?? 1); }}
+        onClick={() => { void handleRepeatToggle(); }}
       >
         {REPEAT_ICONS[repeat] ?? REPEAT_ICONS.NONE}
         Repeat: {REPEAT_LABELS[repeat] ?? 'Off'}
@@ -102,17 +98,19 @@ const RepeatButton = ({ repeat }: { repeat: string }) => {
 };
 
 export const PlayerView = () => {
-  const { song, isPlaying, shuffle: isShuffled, repeat } = usePlayer();
+  const { track, isPlaying, shuffle: isShuffled, repeat } = usePlayer();
 
-  const albumArt = song?.albumArt;
-  const title = song?.title ?? 'Nothing playing';
-  const artist = song?.artist ?? '';
+  const albumArt = track?.albumArt;
+  const title = track?.title ?? 'Nothing playing';
+  const artist = track?.artist ?? '';
+
+  const handleShuffleToggle = async () => {
+    await call('toggle_shuffle');
+  };
 
   return (
     <>
       {/* Track info: album art + title/artist */}
-      {/* Note: Section applies margin: '0 -10px'. The 12px horizontal padding here
-          restores alignment (10px offset + 2px visual inset). Do not remove it. */}
       <Section>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 16px' }}>
           {albumArt ? (
@@ -152,17 +150,17 @@ export const PlayerView = () => {
             style={{ display: 'flex', marginTop: '4px', marginBottom: '4px' }}
             flow-children="horizontal"
           >
-            <DialogButton style={transBtnFirst} onClick={() => { void previous(); }}><IoPlaySkipBack /></DialogButton>
-            <DialogButton style={transBtnMid} onClick={() => { void togglePlay(); }}>
+            <DialogButton style={transBtnFirst} onClick={() => { void playPrevious(); }}><IoPlaySkipBack /></DialogButton>
+            <DialogButton style={transBtnMid} onClick={() => { togglePlayback(); }}>
               {isPlaying ? <FaPause /> : <IoPlay />}
             </DialogButton>
-            <DialogButton style={transBtnLast} onClick={() => { void next(); }}><IoPlaySkipForward /></DialogButton>
+            <DialogButton style={transBtnLast} onClick={() => { void playNext(); }}><IoPlaySkipForward /></DialogButton>
           </Focusable>
         ) : (
           <>
-            <ButtonItem onClick={() => { void previous(); }}><IoPlaySkipBack /> Previous</ButtonItem>
-            <ButtonItem onClick={() => { void togglePlay(); }}>{isPlaying ? <><FaPause /> Pause</> : <><IoPlay /> Play</>}</ButtonItem>
-            <ButtonItem onClick={() => { void next(); }}><IoPlaySkipForward /> Next</ButtonItem>
+            <ButtonItem onClick={() => { void playPrevious(); }}><IoPlaySkipBack /> Previous</ButtonItem>
+            <ButtonItem onClick={() => { togglePlayback(); }}>{isPlaying ? <><FaPause /> Pause</> : <><IoPlay /> Play</>}</ButtonItem>
+            <ButtonItem onClick={() => { void playNext(); }}><IoPlaySkipForward /> Next</ButtonItem>
           </>
         )}
       </Section>
@@ -178,7 +176,7 @@ export const PlayerView = () => {
         <PaddedToggle
           label={<span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FaRandom size={14} /> Shuffle</span>}
           checked={isShuffled}
-          onChange={() => { void shuffle(); }}
+          onChange={() => { void handleShuffleToggle(); }}
         />
         <RepeatButton repeat={repeat} />
       </Section>

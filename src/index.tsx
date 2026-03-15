@@ -5,12 +5,11 @@ import { FaMusic } from 'react-icons/fa';
 import { BsGearFill } from 'react-icons/bs';
 
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
-import { NotConnectedView } from './components/NotConnectedView';
-import { AuthTokenView } from './components/AuthTokenView';
 import { PlayerView } from './components/PlayerView';
 import { QueueView } from './components/QueueView';
 import { Section } from './components/Section';
 import { SettingsPage } from './components/SettingsPage';
+import { initAudio, destroyAudio } from './services/audioManager';
 
 const SETTINGS_ROUTE = '/youtube-music-settings';
 
@@ -107,11 +106,27 @@ const Content = () => {
 };
 
 const PluginContentWrapper = () => {
-  const { connected, authRequired } = usePlayer();
+  const { authenticated } = usePlayer();
   const [activeTab, setActiveTab] = useState<string>('player');
 
-  if (!connected) return <NotConnectedView />;
-  if (authRequired) return <AuthTokenView />;
+  // If not authenticated, prompt user to go to settings
+  if (!authenticated) {
+    return (
+      <Section>
+        <div style={{ padding: '16px', textAlign: 'center' }}>
+          <div style={{ color: 'var(--gpSystemLighterGrey)', fontSize: '13px', marginBottom: '12px' }}>
+            Not authenticated. Set up your YouTube Music credentials in Settings.
+          </div>
+          <ButtonItem onClick={() => {
+            Navigation.CloseSideMenus();
+            Navigation.Navigate(SETTINGS_ROUTE);
+          }}>
+            Open Settings
+          </ButtonItem>
+        </div>
+      </Section>
+    );
+  }
 
   if (!Tabs) {
     return (
@@ -140,7 +155,7 @@ const onSettingsClick = () => {
 };
 
 export default definePlugin(() => {
-  // Register the settings route as a full-screen page
+  initAudio();
   routerHook.addRoute(SETTINGS_ROUTE, () => <SettingsPage />);
 
   return {
@@ -170,6 +185,7 @@ export default definePlugin(() => {
     content: <Content />,
     icon: <FaMusic />,
     onDismount() {
+      destroyAudio();
       routerHook.removeRoute(SETTINGS_ROUTE);
     },
   };
