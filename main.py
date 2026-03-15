@@ -371,60 +371,64 @@ class Plugin:
     # ── Diagnostic: test which ytmusicapi methods work ──
 
     async def test_api(self):
-        """Test various ytmusicapi methods to find what works."""
+        """Test various ytmusicapi methods and capture detailed diagnostics."""
         if not self.ytmusic:
             return {"error": "Not authenticated"}
 
         results = {}
 
-        # Test 1: search
+        # Diagnostic info
+        results["auth_type"] = str(self.ytmusic.auth_type)
+        results["has_token"] = hasattr(self.ytmusic, '_token')
+        if hasattr(self.ytmusic, '_token'):
+            token = self.ytmusic._token
+            results["token_type"] = getattr(token, 'token_type', 'unknown')
+            results["token_scope"] = getattr(token, 'scope', 'unknown')
+            results["token_expires_at"] = getattr(token, 'expires_at', 0)
+            results["token_is_expiring"] = getattr(token, 'is_expiring', 'unknown')
+            import time
+            results["current_time"] = int(time.time())
+            results["token_access_preview"] = getattr(token, 'access_token', '')[:20] + "..."
+
+        # Capture raw request details by making a manual request
         try:
-            search_results = self.ytmusic.search("music", limit=1)
-            results["search"] = f"OK - found {len(search_results)} results"
-            if search_results:
-                results["search_first"] = {
-                    "title": search_results[0].get("title", ""),
-                    "videoId": search_results[0].get("videoId", ""),
-                    "resultType": search_results[0].get("resultType", ""),
-                }
+            import requests as req
+            headers = dict(self.ytmusic.headers)
+            # Remove potentially sensitive full tokens but keep structure
+            if 'authorization' in headers:
+                results["auth_header"] = headers['authorization'][:30] + "..."
+            results["request_headers_keys"] = list(headers.keys())
+
+            context = self.ytmusic.context
+            results["client_name"] = context.get("context", {}).get("client", {}).get("clientName", "")
+            results["client_version"] = context.get("context", {}).get("client", {}).get("clientVersion", "")
+
+            # Make a raw search request manually to capture full response
+            url = "https://music.youtube.com/youtubei/v1/search" + self.ytmusic.params
+            body = {"query": "test"}
+            body.update(context)
+            resp = self.ytmusic._session.post(
+                url,
+                json=body,
+                headers=headers,
+                proxies=self.ytmusic.proxies,
+                cookies=self.ytmusic.cookies,
+            )
+            results["raw_status"] = resp.status_code
+            results["raw_reason"] = resp.reason
+            if resp.status_code >= 400:
+                try:
+                    resp_json = resp.json()
+                    results["raw_error"] = resp_json.get("error", {})
+                except Exception:
+                    results["raw_error_text"] = resp.text[:500]
+            else:
+                results["raw_response_keys"] = list(resp.json().keys())
+                results["search"] = "OK"
         except Exception as e:
-            results["search"] = f"FAIL: {e}"
+            results["raw_request_error"] = str(e)
 
-        # Test 2: get_library_playlists
-        try:
-            playlists = self.ytmusic.get_library_playlists(limit=5)
-            results["library_playlists"] = f"OK - found {len(playlists)} playlists"
-            if playlists:
-                results["first_playlist"] = {
-                    "title": playlists[0].get("title", ""),
-                    "playlistId": playlists[0].get("playlistId", ""),
-                }
-        except Exception as e:
-            results["library_playlists"] = f"FAIL: {e}"
-
-        # Test 3: get_liked_songs
-        try:
-            liked = self.ytmusic.get_liked_songs(limit=1)
-            results["liked_songs"] = f"OK - {liked.get('trackCount', '?')} tracks"
-        except Exception as e:
-            results["liked_songs"] = f"FAIL: {e}"
-
-        # Test 4: get_song with a known videoId (if search worked)
-        test_video_id = results.get("search_first", {}).get("videoId", "")
-        if test_video_id:
-            try:
-                song_data = self.ytmusic.get_song(test_video_id)
-                streaming = song_data.get("streamingData", {})
-                formats = streaming.get("adaptiveFormats", [])
-                audio_formats = [f for f in formats if f.get("mimeType", "").startswith("audio/")]
-                has_url = any(f.get("url") for f in audio_formats)
-                results["get_song"] = f"OK - {len(audio_formats)} audio formats, has_url={has_url}"
-                if audio_formats and audio_formats[0].get("url"):
-                    results["streaming_url_sample"] = audio_formats[0]["url"][:100] + "..."
-            except Exception as e:
-                results["get_song"] = f"FAIL: {e}"
-
-        decky.logger.info(f"API test results: {json.dumps(results, indent=2)}")
+        decky.logger.info(f"API test results: {json.dumps(results, indent=2, default=str)}")
         return results
 
     # ── Temporary: load playlist for testing (will be replaced by Library tab) ──
