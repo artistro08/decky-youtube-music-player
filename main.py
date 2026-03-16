@@ -1,7 +1,14 @@
 import decky
 import json
 import os
+import sys
 import random
+
+# Ensure our py_modules takes priority over system paths (Decky appends, we need insert)
+# This fixes missing stdlib modules like xml.etree in Decky's sandboxed Python
+_py_modules = os.path.join(decky.DECKY_PLUGIN_DIR, "py_modules")
+if _py_modules not in sys.path:
+    sys.path.insert(0, _py_modules)
 
 BROWSER_AUTH_FILE = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "browser.json")
 
