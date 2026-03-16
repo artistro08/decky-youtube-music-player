@@ -313,6 +313,45 @@ class Plugin:
         self.repeat = cycle.get(self.repeat, "NONE")
         return {"repeat": self.repeat}
 
+    # ── Queue management ─────────────────────────────────────────────
+
+    async def get_queue(self):
+        return {
+            "tracks": self.queue,
+            "position": self.queue_position,
+        }
+
+    async def remove_from_queue(self, index):
+        if index < 0 or index >= len(self.queue):
+            return {"error": "Invalid index"}
+
+        self.queue.pop(index)
+
+        if index < self.queue_position:
+            self.queue_position -= 1
+        elif index == self.queue_position:
+            if self.queue_position >= len(self.queue):
+                self.queue_position = max(0, len(self.queue) - 1)
+
+        if self.shuffle and self.queue:
+            self.shuffle_order = list(range(len(self.queue)))
+            random.shuffle(self.shuffle_order)
+            if self.queue_position in self.shuffle_order:
+                self.shuffle_order.remove(self.queue_position)
+                self.shuffle_order.insert(0, self.queue_position)
+
+        return {"success": True, "queue_length": len(self.queue)}
+
+    async def jump_to_queue(self, index):
+        if index < 0 or index >= len(self.queue):
+            return {"error": "Invalid index"}
+
+        self.queue_position = index
+        result = self._current_track_with_url()
+        if result is None or result.get("url") is None:
+            return {"error": "Failed to get streaming URL"}
+        return result
+
     # ── Diagnostic ──────────────────────────────────────────────────
 
     async def test_api(self):
