@@ -109,15 +109,15 @@ export const QueueView = () => {
                 onClick={() => { void handleJump(index); }}
               >
                 {/* Thumbnail */}
-                <div style={{ width: '62px', height: '62px', flexShrink: 0, alignSelf: 'center', position: 'relative', background: 'rgba(255,255,255,0.05)' }}>
+                <div style={{ width: '60px', height: '60px', flexShrink: 0, alignSelf: 'center', position: 'relative', background: 'rgba(255,255,255,0.05)' }}>
                   {thumbnail ? (
                     <img
                       src={thumbnail}
                       alt=""
-                      style={{ width: '62px', height: '62px', objectFit: 'cover', display: 'block' }}
+                      style={{ width: '60px', height: '60px', objectFit: 'cover', display: 'block' }}
                     />
                   ) : (
-                    <div style={{ width: '62px', height: '62px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gpSystemLighterGrey)' }}>
+                    <div style={{ width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gpSystemLighterGrey)' }}>
                       <FaMusic size={18} />
                     </div>
                   )}

@@ -32,9 +32,9 @@ const btnBase: React.CSSProperties = {
   marginLeft: '0',
 };
 
-const transBtnFirst: React.CSSProperties = { ...btnBase, height: '35px', borderRadius: '4px 0 0 4px' };
-const transBtnMid: React.CSSProperties   = { ...btnBase, height: '35px', borderRadius: '0', borderLeft: '1px solid rgba(255,255,255,0.15)' };
-const transBtnLast: React.CSSProperties  = { ...btnBase, height: '35px', borderRadius: '0 4px 4px 0', borderLeft: '1px solid rgba(255,255,255,0.15)' };
+const transBtnFirst: React.CSSProperties = { ...btnBase, height: '33px', borderRadius: '4px 0 0 4px' };
+const transBtnMid: React.CSSProperties   = { ...btnBase, height: '33px', borderRadius: '0', borderLeft: '1px solid rgba(255,255,255,0.15)' };
+const transBtnLast: React.CSSProperties  = { ...btnBase, height: '33px', borderRadius: '0 4px 4px 0', borderLeft: '1px solid rgba(255,255,255,0.15)' };
 
 const applyInnerPadding = (el: HTMLElement) => {
   el.style.paddingLeft = '19px';
@@ -144,16 +144,16 @@ export const PlayerView = () => {
     <>
       {/* Track info: album art + title/artist */}
       <Section>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 16px 4px' }}>
           {albumArt ? (
             <img
               src={albumArt}
               alt="Album art"
-              style={{ width: '72px', height: '72px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
+              style={{ width: '60px', height: '60px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
             />
           ) : (
             <div style={{
-              width: '72px', height: '72px', borderRadius: '4px', flexShrink: 0,
+              width: '60px', height: '60px', borderRadius: '4px', flexShrink: 0,
               background: 'rgba(255,255,255,0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: 'var(--gpSystemLighterGrey)',
@@ -207,13 +207,13 @@ export const PlayerView = () => {
             flow-children="horizontal"
           >
             <DialogButton
-              style={{ ...btnBase, height: '35px', borderRadius: '4px 0 0 4px' }}
+              style={{ ...btnBase, height: '32px', borderRadius: '4px 0 0 4px' }}
               onClick={() => { void handleRate('LIKE'); }}
             >
               {rating === 'LIKE' ? <AiFillLike size={18} /> : <AiOutlineLike size={18} />}
             </DialogButton>
             <DialogButton
-              style={{ ...btnBase, height: '35px', borderRadius: '0 4px 4px 0', borderLeft: '1px solid rgba(255,255,255,0.15)' }}
+              style={{ ...btnBase, height: '32px', borderRadius: '0 4px 4px 0', borderLeft: '1px solid rgba(255,255,255,0.15)' }}
               onClick={() => { void handleRate('DISLIKE'); }}
             >
               {rating === 'DISLIKE' ? <AiFillDislike size={18} /> : <AiOutlineDislike size={18} />}
