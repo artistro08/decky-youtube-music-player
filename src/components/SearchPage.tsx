@@ -1,4 +1,4 @@
-import { ButtonItem, DialogButton, TextField, Focusable, Navigation } from '@decky/ui';
+import { ButtonItem, DialogButton, TextField, Focusable, Navigation, QuickAccessTab } from '@decky/ui';
 import { call } from '@decky/api';
 import { useState } from 'react';
 import { FaMusic } from 'react-icons/fa';
@@ -50,7 +50,7 @@ export const SearchPage = () => {
       } else if (result.url) {
         await playTrack(result as TrackInfo);
         Navigation.NavigateBack();
-        Navigation.OpenQuickAccessMenu();
+        Navigation.OpenQuickAccessMenu(QuickAccessTab.Decky);
         return;
       }
     } catch (e) {

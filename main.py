@@ -5,6 +5,7 @@ import random
 
 _PY_MODULES = os.path.join(decky.DECKY_PLUGIN_DIR, "py_modules")
 BROWSER_AUTH_FILE = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "browser.json")
+SETTINGS_FILE = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "settings.json")
 
 class Plugin:
     authenticated = False
@@ -34,8 +35,25 @@ class Plugin:
                 self.authenticated = False
                 self.ytmusic = None
 
+    def _load_settings(self):
+        """Load persisted settings (volume, etc.) from disk."""
+        if os.path.exists(SETTINGS_FILE):
+            try:
+                with open(SETTINGS_FILE, "r") as f:
+                    data = json.load(f)
+                self.volume = data.get("volume", 1.0)
+            except Exception as e:
+                decky.logger.error(f"Failed to load settings: {e}")
+
+    def _save_settings(self):
+        """Save persisted settings to disk."""
+        os.makedirs(decky.DECKY_PLUGIN_SETTINGS_DIR, exist_ok=True)
+        with open(SETTINGS_FILE, "w") as f:
+            json.dump({"volume": self.volume}, f)
+
     async def _main(self):
         decky.logger.info("YouTube Music plugin loaded")
+        self._load_settings()
         self._try_init_ytmusic()
 
     async def _unload(self):
@@ -298,6 +316,7 @@ class Plugin:
         except Exception as e:
             decky.logger.warning(f"PulseAudio volume control failed (falling back to <audio> only): {e}")
 
+        self._save_settings()
         return {"volume": value}
 
     async def get_volume(self):
