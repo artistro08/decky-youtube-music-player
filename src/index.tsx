@@ -38,17 +38,29 @@ const TabsContainer = memo(() => {
 
     let scrollEl: HTMLElement | null = null;
     let prevOverflow = '';
+    let minHeight = 0;
 
     const recalcHeight = () => {
       if (!containerRef.current) return;
       const containerRect = containerRef.current.getBoundingClientRect();
+      let newHeight: number;
 
       if (scrollEl) {
         const elRect = scrollEl.getBoundingClientRect();
-        setHeight(elRect.bottom - containerRect.top);
+        newHeight = elRect.bottom - containerRect.top;
       } else {
-        setHeight(window.innerHeight - containerRect.top);
+        newHeight = window.innerHeight - containerRect.top;
       }
+
+      // Use initial height as minimum — prevents shrinking after QAM tab switches
+      if (minHeight === 0) {
+        minHeight = newHeight;
+        console.log('[YTM] Initial height set:', minHeight);
+      }
+
+      const finalHeight = Math.max(newHeight, minHeight);
+      console.log('[YTM] recalcHeight:', { newHeight, minHeight, finalHeight, scrollEl: scrollEl?.className });
+      setHeight(finalHeight);
     };
 
     // Find the scroll ancestor once
@@ -58,6 +70,7 @@ const TabsContainer = memo(() => {
       const oy = style.overflowY;
       if (oy === 'scroll' || oy === 'auto' || oy === 'overlay') {
         scrollEl = el as HTMLElement;
+        console.log('[YTM] Found scroll ancestor:', scrollEl.className, scrollEl.getBoundingClientRect());
         break;
       }
       el = el.parentElement;
@@ -71,7 +84,10 @@ const TabsContainer = memo(() => {
     }
 
     // Recalculate when container or scroll ancestor resizes (e.g. QAM tab switch)
-    const observer = new ResizeObserver(recalcHeight);
+    const observer = new ResizeObserver(() => {
+      console.log('[YTM] ResizeObserver fired');
+      recalcHeight();
+    });
     if (scrollEl) observer.observe(scrollEl);
     observer.observe(containerRef.current);
 
