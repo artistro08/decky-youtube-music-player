@@ -428,95 +428,39 @@ class Plugin:
         except Exception as e:
             results["raw_request_error"] = str(e)
 
-        # Test 2: visitor ID value
-        results["visitor_id"] = headers.get("X-Goog-Visitor-Id", "(not set)")
-
-        # Test 3: Fresh session (no state from OAuth flow)
+        # Test 2: Try get_song directly (uses 'player' endpoint, different from search/browse)
         try:
-            import requests as reqlib
-            import time as t
-            fresh = reqlib.Session()
-            fresh_headers = {
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
-                "accept": "*/*",
-                "accept-encoding": "gzip, deflate",
-                "content-type": "application/json",
-                "origin": "https://music.youtube.com",
-                "referer": "https://music.youtube.com/",
-                "authorization": headers.get("authorization", ""),
-                "X-Goog-Visitor-Id": headers.get("X-Goog-Visitor-Id", ""),
-                "X-Goog-Request-Time": str(int(t.time())),
-            }
-            fresh_body = {
-                "query": "test",
-                "context": {
-                    "client": {
-                        "clientName": "WEB_REMIX",
-                        "clientVersion": "1." + t.strftime("%Y%m%d", t.gmtime()) + ".01.00",
-                        "hl": "en",
-                    },
-                    "user": {},
-                },
-            }
-            resp_fresh = fresh.post(
-                "https://music.youtube.com/youtubei/v1/search?alt=json",
-                json=fresh_body,
-                headers=fresh_headers,
-                cookies={"SOCS": "CAI"},
-            )
-            results["fresh_status"] = resp_fresh.status_code
-            if resp_fresh.status_code < 400:
-                results["fresh"] = "OK!"
-            else:
-                try:
-                    results["fresh_error"] = resp_fresh.json().get("error", {}).get("message", "")[:100]
-                except Exception:
-                    results["fresh_error"] = resp_fresh.text[:200]
+            # Use a well-known videoId
+            song = self.ytmusic.get_song("dQw4w9WgXcQ")
+            streaming = song.get("streamingData", {})
+            formats = streaming.get("adaptiveFormats", [])
+            audio_fmts = [f for f in formats if f.get("mimeType", "").startswith("audio/")]
+            has_url = any(f.get("url") for f in audio_fmts)
+            results["get_song"] = f"OK - {len(audio_fmts)} audio formats, has_url={has_url}"
+            if audio_fmts and audio_fmts[0].get("url"):
+                results["sample_url"] = audio_fmts[0]["url"][:80] + "..."
+            results["playability"] = song.get("playabilityStatus", {}).get("status", "unknown")
         except Exception as e:
-            results["fresh_error"] = str(e)[:200]
+            results["get_song"] = f"FAIL: {str(e)[:200]}"
 
-        # Test 4: Try ANDROID_MUSIC client (might work better with TV OAuth)
+        # Test 3: Try get_song with mobile context
         try:
-            android_body = {
-                "query": "test",
-                "context": {
-                    "client": {
-                        "clientName": "ANDROID_MUSIC",
-                        "clientVersion": "7.27.52",
-                        "androidSdkVersion": 30,
-                        "hl": "en",
-                        "gl": "US",
-                    },
-                    "user": {},
-                },
-            }
-            android_headers = {
-                "user-agent": "com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 11) gzip",
-                "content-type": "application/json",
-                "authorization": headers.get("authorization", ""),
-                "X-Goog-Request-Time": str(int(t.time())),
-            }
-            resp_android = reqlib.post(
-                "https://music.youtube.com/youtubei/v1/search?alt=json&key=REDACTED_PUBLIC_KEY",
-                json=android_body,
-                headers=android_headers,
-            )
-            results["android_status"] = resp_android.status_code
-            if resp_android.status_code < 400:
-                results["android"] = "OK - ANDROID_MUSIC client works!"
-                try:
-                    resp_data = resp_android.json()
-                    # Check if search returned results
-                    results["android_keys"] = list(resp_data.keys())[:5]
-                except Exception:
-                    pass
-            else:
-                try:
-                    results["android_error"] = resp_android.json().get("error", {}).get("message", "")[:100]
-                except Exception:
-                    results["android_error"] = resp_android.text[:200]
+            with self.ytmusic.as_mobile():
+                song2 = self.ytmusic.get_song("dQw4w9WgXcQ")
+            streaming2 = song2.get("streamingData", {})
+            formats2 = streaming2.get("adaptiveFormats", [])
+            audio_fmts2 = [f for f in formats2 if f.get("mimeType", "").startswith("audio/")]
+            has_url2 = any(f.get("url") for f in audio_fmts2)
+            results["get_song_mobile"] = f"OK - {len(audio_fmts2)} audio formats, has_url={has_url2}"
         except Exception as e:
-            results["android_error"] = str(e)[:200]
+            results["get_song_mobile"] = f"FAIL: {str(e)[:200]}"
+
+        # Test 4: Try get_watch_playlist (uses 'next' endpoint)
+        try:
+            watch = self.ytmusic.get_watch_playlist("dQw4w9WgXcQ", limit=1)
+            results["watch_playlist"] = f"OK - {len(watch.get('tracks', []))} tracks"
+        except Exception as e:
+            results["watch_playlist"] = f"FAIL: {str(e)[:200]}"
 
         decky.logger.info(f"API test results: {json.dumps(results, indent=2, default=str)}")
         return results
