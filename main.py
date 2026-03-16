@@ -323,6 +323,36 @@ class Plugin:
         except Exception as e:
             results["library_playlists"] = f"FAIL: {str(e)[:200]}"
 
+        # Test yt-dlp URL extraction
+        try:
+            import yt_dlp
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'format': 'bestaudio[ext=m4a]/bestaudio',
+                'skip_download': True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(
+                    f'https://music.youtube.com/watch?v={video_id}',
+                    download=False,
+                )
+                results["ytdlp_title"] = info.get("title", "")
+                results["ytdlp_url"] = (info.get("url", "") or "")[:100] + "..." if info.get("url") else "NO URL"
+                results["ytdlp_format"] = info.get("format", "")
+                results["ytdlp_ext"] = info.get("ext", "")
+                formats = info.get("formats", [])
+                results["ytdlp_total_formats"] = len(formats)
+                audio_fmts = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') in ('none', None)]
+                results["ytdlp_audio_formats"] = len(audio_fmts)
+                if audio_fmts:
+                    best = audio_fmts[-1]
+                    results["ytdlp_best_audio_url"] = (best.get("url", "") or "")[:100] + "..."
+                    results["ytdlp_best_audio_ext"] = best.get("ext", "")
+                    results["ytdlp_best_audio_abr"] = best.get("abr", 0)
+        except Exception as e:
+            results["ytdlp_error"] = str(e)[:300]
+
         decky.logger.info(f"API test results: {json.dumps(results, indent=2, default=str)}")
         return results
 
