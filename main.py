@@ -95,6 +95,9 @@ class Plugin:
             env = os.environ.copy()
             # Add our py_modules to PYTHONPATH so the subprocess can find yt-dlp
             env['PYTHONPATH'] = _PY_MODULES + ':' + env.get('PYTHONPATH', '')
+            # Strip LD_LIBRARY_PATH to avoid Decky's bundled OpenSSL conflicting
+            # with the system Python's ssl module (same fix as Deckify)
+            env.pop('LD_LIBRARY_PATH', None)
 
             result = subprocess.run(
                 [
@@ -332,6 +335,7 @@ class Plugin:
             import subprocess
             env = os.environ.copy()
             env['PYTHONPATH'] = _PY_MODULES + ':' + env.get('PYTHONPATH', '')
+            env.pop('LD_LIBRARY_PATH', None)
             proc = subprocess.run(
                 [
                     'python3', '-m', 'yt_dlp',
