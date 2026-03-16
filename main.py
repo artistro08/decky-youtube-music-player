@@ -359,6 +359,7 @@ class Plugin:
             return {"error": "Not authenticated"}
         try:
             playlists = self.ytmusic.get_library_playlists(limit=limit)
+            raw_count = len(playlists)
             result = []
             # Liked Songs first
             result.append({
@@ -369,7 +370,6 @@ class Plugin:
             })
             for p in playlists:
                 pid = p.get("playlistId", "")
-                # Skip "Liked Music" (LM) since we manually add it above
                 if pid == "LM":
                     continue
                 thumbnails = p.get("thumbnails", [])
@@ -380,7 +380,7 @@ class Plugin:
                     "count": p.get("count"),
                     "thumbnail": thumb,
                 })
-            return {"playlists": result}
+            return {"playlists": result, "has_more": raw_count >= limit}
         except Exception as e:
             decky.logger.error(f"Failed to get library playlists: {e}")
             return {"error": str(e)}

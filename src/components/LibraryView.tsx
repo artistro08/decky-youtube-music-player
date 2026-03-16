@@ -25,14 +25,12 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
     setLoading(true);
     setError('');
     try {
-      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string }>('get_library_playlists', limit);
+      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string; has_more?: boolean }>('get_library_playlists', limit);
       if (result.error) {
         setError(result.error);
       } else {
-        const fetched = result.playlists ?? [];
-        setPlaylists(fetched);
-        // If we got fewer than requested (minus 1 for the manual Liked Songs entry), no more to load
-        setHasMore(fetched.length - 1 >= limit);
+        setPlaylists(result.playlists ?? []);
+        setHasMore(result.has_more ?? false);
       }
     } catch (e) {
       setError('Failed to load playlists');
@@ -43,12 +41,12 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
   const handleLoadMore = async () => {
     setLoadingMore(true);
     try {
-      const newLimit = playlists.length + 25;
-      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string }>('get_library_playlists', newLimit);
+      // Request more: current count (minus Liked Songs) + 25
+      const newLimit = (playlists.length - 1) + 25;
+      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string; has_more?: boolean }>('get_library_playlists', newLimit);
       if (!result.error) {
-        const fetched = result.playlists ?? [];
-        setPlaylists(fetched);
-        setHasMore(fetched.length - 1 >= newLimit);
+        setPlaylists(result.playlists ?? []);
+        setHasMore(result.has_more ?? false);
       }
     } catch (e) {
       // silently fail
