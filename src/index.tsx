@@ -28,13 +28,13 @@ const PaddedButtonItem = (props: React.ComponentProps<typeof ButtonItem>) => {
   return <div ref={ref}><ButtonItem {...props} /></div>;
 };
 
-// Module-scoped — survives TabsContainer unmount/remount (QAM tab switches)
-let savedMinHeight = 0;
+// Locked minimum height — prevents shrinking after QAM tab switches
+const MIN_HEIGHT = 433;
 
 const TabsContainer = memo(() => {
   const [activeTab, setActiveTab] = useState<string>('player');
   const containerRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number>(savedMinHeight || 500);
+  const [height, setHeight] = useState<number>(MIN_HEIGHT);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -54,9 +54,7 @@ const TabsContainer = memo(() => {
         newHeight = window.innerHeight - containerRect.top;
       }
 
-      // Store the first good height as minimum (module-scoped, survives remounts)
-      if (savedMinHeight === 0 && newHeight > 100) savedMinHeight = newHeight;
-      setHeight(Math.max(newHeight, savedMinHeight));
+      setHeight(Math.max(newHeight, MIN_HEIGHT));
     };
 
     // Find the scroll ancestor once
