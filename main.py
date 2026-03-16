@@ -431,68 +431,92 @@ class Plugin:
         # Test 2: visitor ID value
         results["visitor_id"] = headers.get("X-Goog-Visitor-Id", "(not set)")
 
-        # Test 3: Try with API key added (ytmusicapi only adds it for browser auth)
+        # Test 3: Fresh session (no state from OAuth flow)
         try:
-            url_with_key = url + "&key=REDACTED_PUBLIC_KEY"
-            resp3 = self.ytmusic._session.post(
-                url_with_key,
-                json=body,
-                headers=headers,
-                proxies=self.ytmusic.proxies,
-                cookies=self.ytmusic.cookies,
+            import requests as reqlib
+            import time as t
+            fresh = reqlib.Session()
+            fresh_headers = {
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+                "accept": "*/*",
+                "accept-encoding": "gzip, deflate",
+                "content-type": "application/json",
+                "origin": "https://music.youtube.com",
+                "referer": "https://music.youtube.com/",
+                "authorization": headers.get("authorization", ""),
+                "X-Goog-Visitor-Id": headers.get("X-Goog-Visitor-Id", ""),
+                "X-Goog-Request-Time": str(int(t.time())),
+            }
+            fresh_body = {
+                "query": "test",
+                "context": {
+                    "client": {
+                        "clientName": "WEB_REMIX",
+                        "clientVersion": "1." + t.strftime("%Y%m%d", t.gmtime()) + ".01.00",
+                        "hl": "en",
+                    },
+                    "user": {},
+                },
+            }
+            resp_fresh = fresh.post(
+                "https://music.youtube.com/youtubei/v1/search?alt=json",
+                json=fresh_body,
+                headers=fresh_headers,
+                cookies={"SOCS": "CAI"},
             )
-            results["with_key_status"] = resp3.status_code
-            if resp3.status_code < 400:
-                results["with_key"] = "OK - adding API key fixed it!"
+            results["fresh_status"] = resp_fresh.status_code
+            if resp_fresh.status_code < 400:
+                results["fresh"] = "OK!"
             else:
                 try:
-                    results["with_key_error"] = resp3.json().get("error", {}).get("message", "")[:100]
+                    results["fresh_error"] = resp_fresh.json().get("error", {}).get("message", "")[:100]
                 except Exception:
-                    results["with_key_error"] = resp3.text[:200]
+                    results["fresh_error"] = resp_fresh.text[:200]
         except Exception as e:
-            results["with_key_error"] = str(e)[:200]
+            results["fresh_error"] = str(e)[:200]
 
-        # Test 4: Try without content-encoding header
+        # Test 4: Try ANDROID_MUSIC client (might work better with TV OAuth)
         try:
-            clean_headers = {k: v for k, v in headers.items() if k.lower() != 'content-encoding'}
-            resp2 = self.ytmusic._session.post(
-                url,
-                json=body,
-                headers=clean_headers,
-                proxies=self.ytmusic.proxies,
-                cookies=self.ytmusic.cookies,
+            android_body = {
+                "query": "test",
+                "context": {
+                    "client": {
+                        "clientName": "ANDROID_MUSIC",
+                        "clientVersion": "7.27.52",
+                        "androidSdkVersion": 30,
+                        "hl": "en",
+                        "gl": "US",
+                    },
+                    "user": {},
+                },
+            }
+            android_headers = {
+                "user-agent": "com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 11) gzip",
+                "content-type": "application/json",
+                "authorization": headers.get("authorization", ""),
+                "X-Goog-Request-Time": str(int(t.time())),
+            }
+            resp_android = reqlib.post(
+                "https://music.youtube.com/youtubei/v1/search?alt=json&key=REDACTED_PUBLIC_KEY",
+                json=android_body,
+                headers=android_headers,
             )
-            results["no_gzip_status"] = resp2.status_code
-            if resp2.status_code < 400:
-                results["no_gzip"] = "OK - removing content-encoding fixed it!"
+            results["android_status"] = resp_android.status_code
+            if resp_android.status_code < 400:
+                results["android"] = "OK - ANDROID_MUSIC client works!"
+                try:
+                    resp_data = resp_android.json()
+                    # Check if search returned results
+                    results["android_keys"] = list(resp_data.keys())[:5]
+                except Exception:
+                    pass
             else:
                 try:
-                    results["no_gzip_error"] = resp2.json().get("error", {}).get("message", "")[:100]
+                    results["android_error"] = resp_android.json().get("error", {}).get("message", "")[:100]
                 except Exception:
-                    results["no_gzip_error"] = resp2.text[:200]
+                    results["android_error"] = resp_android.text[:200]
         except Exception as e:
-            results["no_gzip_error"] = str(e)[:200]
-
-        # Test 5: Try both fixes together
-        try:
-            clean_headers2 = {k: v for k, v in headers.items() if k.lower() != 'content-encoding'}
-            resp4 = self.ytmusic._session.post(
-                url_with_key,
-                json=body,
-                headers=clean_headers2,
-                proxies=self.ytmusic.proxies,
-                cookies=self.ytmusic.cookies,
-            )
-            results["both_fixes_status"] = resp4.status_code
-            if resp4.status_code < 400:
-                results["both_fixes"] = "OK - both fixes together worked!"
-            else:
-                try:
-                    results["both_fixes_error"] = resp4.json().get("error", {}).get("message", "")[:100]
-                except Exception:
-                    results["both_fixes_error"] = resp4.text[:200]
-        except Exception as e:
-            results["both_fixes_error"] = str(e)[:200]
+            results["android_error"] = str(e)[:200]
 
         decky.logger.info(f"API test results: {json.dumps(results, indent=2, default=str)}")
         return results
