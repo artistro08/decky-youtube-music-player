@@ -10,9 +10,11 @@ import { QueueView } from './components/QueueView';
 import { LibraryView } from './components/LibraryView';
 import { Section } from './components/Section';
 import { SettingsPage } from './components/SettingsPage';
+import { SearchPage } from './components/SearchPage';
 import { initAudio, destroyAudio } from './services/audioManager';
 
 const SETTINGS_ROUTE = '/youtube-music-settings';
+const SEARCH_ROUTE = '/youtube-music-search';
 
 const TabsContainer = memo(() => {
   const [activeTab, setActiveTab] = useState<string>('player');
@@ -160,6 +162,7 @@ const onSettingsClick = () => {
 export default definePlugin(() => {
   initAudio();
   routerHook.addRoute(SETTINGS_ROUTE, () => <SettingsPage />);
+  routerHook.addRoute(SEARCH_ROUTE, () => <SearchPage />);
 
   return {
     name: 'YouTube Music',
@@ -190,6 +193,7 @@ export default definePlugin(() => {
     onDismount() {
       destroyAudio();
       routerHook.removeRoute(SETTINGS_ROUTE);
+      routerHook.removeRoute(SEARCH_ROUTE);
     },
   };
 });

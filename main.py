@@ -422,6 +422,102 @@ class Plugin:
             decky.logger.error(f"Failed to get library playlists: {e}")
             return {"error": str(e)}
 
+    # ── Search ─────────────────────────────────────────────────────
+
+    async def search_songs(self, query):
+        if not self.ytmusic:
+            return {"error": "Not authenticated"}
+        try:
+            results = self.ytmusic.search(query, filter="songs", limit=20)
+            songs = []
+            for r in results:
+                thumbnails = r.get("thumbnails", [])
+                album_art = thumbnails[-1]["url"] if thumbnails else ""
+                artists = r.get("artists", [])
+                artist_name = ", ".join(a.get("name", "") for a in artists) if artists else ""
+                songs.append({
+                    "videoId": r.get("videoId", ""),
+                    "title": r.get("title", "Unknown"),
+                    "artist": artist_name,
+                    "albumArt": album_art,
+                    "duration": r.get("duration", ""),
+                })
+            return {"results": [s for s in songs if s["videoId"]]}
+        except Exception as e:
+            decky.logger.error(f"Search failed: {e}")
+            return {"error": str(e)}
+
+    async def play_song_radio(self, video_id):
+        if not self.ytmusic:
+            return {"error": "Not authenticated"}
+        try:
+            self.is_playing = False
+
+            watch = self.ytmusic.get_watch_playlist(videoId=video_id, radio=True)
+            tracks = watch.get("tracks", [])
+            if not tracks:
+                return {"error": "No radio tracks found"}
+
+            self.queue = []
+            for t in tracks:
+                thumbnails = t.get("thumbnail", [])
+                album_art = thumbnails[-1]["url"] if thumbnails else ""
+                artists = t.get("artists", [])
+                artist_name = ", ".join(a.get("name", "") for a in artists) if artists else ""
+                album = t.get("album")
+                album_name = album.get("name", "") if album else ""
+
+                duration_str = t.get("length", "0:00")
+                duration_seconds = 0
+                parts = duration_str.split(":")
+                try:
+                    if len(parts) == 2:
+                        duration_seconds = int(parts[0]) * 60 + int(parts[1])
+                    elif len(parts) == 3:
+                        duration_seconds = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                except ValueError:
+                    pass
+
+                self.queue.append({
+                    "videoId": t.get("videoId", ""),
+                    "title": t.get("title", "Unknown"),
+                    "artist": artist_name,
+                    "album": album_name,
+                    "albumArt": album_art,
+                    "duration": duration_seconds,
+                    "likeStatus": t.get("likeStatus", "INDIFFERENT"),
+                })
+
+            self.queue = [t for t in self.queue if t["videoId"]]
+            if not self.queue:
+                return {"error": "No playable tracks in radio"}
+
+            # Put the selected song first if it's not already
+            for i, t in enumerate(self.queue):
+                if t["videoId"] == video_id:
+                    if i != 0:
+                        self.queue.insert(0, self.queue.pop(i))
+                    break
+
+            self.queue_position = 0
+            if self.shuffle:
+                self.shuffle_order = list(range(len(self.queue)))
+                random.shuffle(self.shuffle_order)
+                self.shuffle_order.remove(0)
+                self.shuffle_order.insert(0, 0)
+            else:
+                self.shuffle_order = []
+
+            result = self._current_track_with_url()
+            if result is None or result.get("url") is None:
+                return {"error": "Failed to get streaming URL"}
+
+            self.is_playing = True
+            return result
+        except Exception as e:
+            decky.logger.error(f"Failed to start song radio for {video_id}: {e}")
+            return {"error": str(e)}
+
     # ── Playlist loading ─────────────────────────────────────────────
 
     async def load_playlist(self, playlist_id):

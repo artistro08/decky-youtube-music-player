@@ -1,7 +1,7 @@
-import { ButtonItem, DialogButton, Focusable, ToggleField } from '@decky/ui';
+import { ButtonItem, DialogButton, Focusable, ToggleField, Navigation } from '@decky/ui';
 import { call } from '@decky/api';
 import { useEffect, useRef, useState } from 'react';
-import { FaPause, FaRandom, FaMusic } from 'react-icons/fa';
+import { FaPause, FaRandom, FaMusic, FaSearch } from 'react-icons/fa';
 import { IoPlay, IoPlaySkipBack, IoPlaySkipForward } from 'react-icons/io5';
 import { MdRepeat, MdRepeatOne } from 'react-icons/md';
 import { AiOutlineLike, AiFillLike, AiOutlineDislike, AiFillDislike } from 'react-icons/ai';
@@ -245,6 +245,34 @@ export const PlayerView = () => {
             updateState({ repeat: result.repeat as 'NONE' | 'ALL' | 'ONE' });
           })();
         }} />
+      </Section>
+
+      {/* Search */}
+      <Section>
+        <Focusable>
+          <DialogButton
+            style={{
+              height: '42px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              gap: '6px',
+              paddingLeft: '19px',
+              paddingRight: '19px',
+              borderRadius: '0',
+              color: 'white',
+              background: '#0d141c',
+              transition: 'background 0.2s ease',
+            }}
+            onClick={() => {
+              Navigation.CloseSideMenus();
+              Navigation.Navigate('/youtube-music-search');
+            }}
+          >
+            <FaSearch size={14} />
+            Search
+          </DialogButton>
+        </Focusable>
       </Section>
     </>
   );
