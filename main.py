@@ -377,9 +377,13 @@ class Plugin:
 
     # ── Library ─────────────────────────────────────────────────────
 
-    async def get_library_playlists(self):
+    _cached_playlists = None
+
+    async def get_library_playlists(self, refresh=False):
         if not self.ytmusic:
             return {"error": "Not authenticated"}
+        if self._cached_playlists and not refresh:
+            return {"playlists": self._cached_playlists}
         try:
             playlists = self.ytmusic.get_library_playlists(limit=None)
             result = []
@@ -402,6 +406,7 @@ class Plugin:
                     "count": p.get("count"),
                     "thumbnail": thumb,
                 })
+            self._cached_playlists = result
             return {"playlists": result}
         except Exception as e:
             decky.logger.error(f"Failed to get library playlists: {e}")
