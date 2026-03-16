@@ -428,16 +428,31 @@ class Plugin:
         except Exception as e:
             results["raw_request_error"] = str(e)
 
-        # Test 2: Try unauthenticated YTMusic to isolate auth vs request issue
-        try:
-            from ytmusicapi import YTMusic as YTM
-            ytm_unauth = YTM()
-            unauth_results = ytm_unauth.search("test", limit=1)
-            results["unauth_search"] = f"OK - {len(unauth_results)} results"
-        except Exception as e:
-            results["unauth_search"] = f"FAIL: {str(e)[:200]}"
+        # Test 2: visitor ID value
+        results["visitor_id"] = headers.get("X-Goog-Visitor-Id", "(not set)")
 
-        # Test 3: Try without content-encoding header
+        # Test 3: Try with API key added (ytmusicapi only adds it for browser auth)
+        try:
+            url_with_key = url + "&key=REDACTED_PUBLIC_KEY"
+            resp3 = self.ytmusic._session.post(
+                url_with_key,
+                json=body,
+                headers=headers,
+                proxies=self.ytmusic.proxies,
+                cookies=self.ytmusic.cookies,
+            )
+            results["with_key_status"] = resp3.status_code
+            if resp3.status_code < 400:
+                results["with_key"] = "OK - adding API key fixed it!"
+            else:
+                try:
+                    results["with_key_error"] = resp3.json().get("error", {}).get("message", "")[:100]
+                except Exception:
+                    results["with_key_error"] = resp3.text[:200]
+        except Exception as e:
+            results["with_key_error"] = str(e)[:200]
+
+        # Test 4: Try without content-encoding header
         try:
             clean_headers = {k: v for k, v in headers.items() if k.lower() != 'content-encoding'}
             resp2 = self.ytmusic._session.post(
@@ -452,14 +467,32 @@ class Plugin:
                 results["no_gzip"] = "OK - removing content-encoding fixed it!"
             else:
                 try:
-                    results["no_gzip_error"] = resp2.json().get("error", {}).get("message", "")
+                    results["no_gzip_error"] = resp2.json().get("error", {}).get("message", "")[:100]
                 except Exception:
                     results["no_gzip_error"] = resp2.text[:200]
         except Exception as e:
             results["no_gzip_error"] = str(e)[:200]
 
-        # Test 4: Check visitor ID value
-        results["visitor_id"] = headers.get("X-Goog-Visitor-Id", "(not set)")
+        # Test 5: Try both fixes together
+        try:
+            clean_headers2 = {k: v for k, v in headers.items() if k.lower() != 'content-encoding'}
+            resp4 = self.ytmusic._session.post(
+                url_with_key,
+                json=body,
+                headers=clean_headers2,
+                proxies=self.ytmusic.proxies,
+                cookies=self.ytmusic.cookies,
+            )
+            results["both_fixes_status"] = resp4.status_code
+            if resp4.status_code < 400:
+                results["both_fixes"] = "OK - both fixes together worked!"
+            else:
+                try:
+                    results["both_fixes_error"] = resp4.json().get("error", {}).get("message", "")[:100]
+                except Exception:
+                    results["both_fixes_error"] = resp4.text[:200]
+        except Exception as e:
+            results["both_fixes_error"] = str(e)[:200]
 
         decky.logger.info(f"API test results: {json.dumps(results, indent=2, default=str)}")
         return results
