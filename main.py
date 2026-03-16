@@ -246,6 +246,54 @@ class Plugin:
             "current_track": track,
         }
 
+    # ── Volume ─────────────────────────────────────────────────────
+
+    async def set_volume(self, value):
+        """Set volume. value is 0-100 from frontend."""
+        import subprocess
+        self.volume = max(0, min(100, value)) / 100.0  # store as 0.0-1.0
+
+        # Try to set PulseAudio volume for CEF sink-inputs
+        try:
+            env = os.environ.copy()
+            env.pop('LD_LIBRARY_PATH', None)
+
+            result = subprocess.run(
+                ["pactl", "list", "sink-inputs"],
+                capture_output=True, text=True, env=env, timeout=5,
+            )
+            output = result.stdout
+
+            # Parse sink-input indices for steamwebhelper
+            current_index = None
+            indices = []
+            for line in output.split("\n"):
+                line = line.strip()
+                if line.startswith("Sink Input #"):
+                    current_index = line.split("#")[1].strip()
+                elif "application.name" in line and "steamwebhelper" in line.lower():
+                    if current_index:
+                        indices.append(current_index)
+
+            # Set volume on all matching sink-inputs
+            percentage = int(value)
+            for idx in indices:
+                subprocess.run(
+                    ["pactl", "set-sink-input-volume", idx, f"{percentage}%"],
+                    capture_output=True, env=env, timeout=5,
+                )
+
+            if not indices:
+                decky.logger.debug("No steamwebhelper sink-inputs found for volume control")
+        except Exception as e:
+            decky.logger.warning(f"PulseAudio volume control failed (falling back to <audio> only): {e}")
+
+        return {"volume": value}
+
+    async def get_volume(self):
+        """Return current volume (0-100 for frontend)."""
+        return {"volume": self.volume * 100}
+
     # ── Shuffle / Repeat ───────────────────────────────────────────
 
     async def toggle_shuffle(self):
