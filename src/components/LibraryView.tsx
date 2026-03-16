@@ -104,7 +104,7 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
           <div style={{ width: '60px', height: '60px', flexShrink: 0, alignSelf: 'center', background: 'rgba(66, 133, 244, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4285f4' }}>
             <FaSearch size={22} />
           </div>
-          <div style={{ flex: 1, minWidth: 0, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ flex: 1, minWidth: 0, padding: '.55rem 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ fontWeight: 'bold', fontSize: '13px' }}>Search</div>
             <div style={{ fontSize: '11px', color: 'var(--gpSystemLighterGrey)', marginTop: '2px' }}>Find songs to play</div>
           </div>
@@ -159,7 +159,7 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
               </div>
 
               {/* Text */}
-              <div style={{ flex: 1, minWidth: 0, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ flex: 1, minWidth: 0, padding: '.55rem 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <div style={{ fontWeight: isLiked ? 'bold' : 'normal', fontSize: '13px', display: 'flex', alignItems: 'center', width: '100%', minWidth: 0 }}>
                   <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', flex: 1, minWidth: 0, maskImage: 'linear-gradient(to right, black calc(100% - 20px), transparent 100%)' }}>
                     {isLoading ? 'Loading...' : playlist.title}
