@@ -57,7 +57,7 @@ export const SettingsPage = () => {
   }
 
   return (
-    <div style={{ padding: '16px 28px' }}>
+    <div style={{ padding: '40px 28px 16px' }}>
       {/* Header */}
       <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <DialogButton

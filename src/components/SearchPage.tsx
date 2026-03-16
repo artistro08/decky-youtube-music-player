@@ -60,16 +60,16 @@ export const SearchPage = () => {
   };
 
   return (
-    <div style={{ padding: '0' }}>
+    <div style={{ padding: '40px 28px 16px' }}>
       {/* Back button + title */}
-      <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', gap: '8px' }}>
+      <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <DialogButton
-          style={{ width: '40px', minWidth: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ width: '40px', minWidth: '40px', height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={() => Navigation.NavigateBack()}
         >
           ←
         </DialogButton>
-        <span style={{ fontWeight: 'bold', fontSize: '16px' }}>Search</span>
+        <span style={{ fontWeight: 'bold', fontSize: '20px' }}>Search</span>
       </Focusable>
 
       {/* Search input */}
