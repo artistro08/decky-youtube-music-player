@@ -1,0 +1,141 @@
+import { DialogButton, Focusable } from '@decky/ui';
+import { call } from '@decky/api';
+import { useEffect, useState } from 'react';
+import { FaHeart, FaMusic } from 'react-icons/fa';
+import type { TrackInfo } from '../types';
+import { playTrack } from '../services/audioManager';
+import { Section } from './Section';
+
+interface PlaylistEntry {
+  playlistId: string;
+  title: string;
+  count: number | null;
+}
+
+export const LibraryView = () => {
+  const [playlists, setPlaylists] = useState<PlaylistEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const fetchPlaylists = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await call<[], { playlists?: PlaylistEntry[]; error?: string }>('get_library_playlists');
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setPlaylists(result.playlists ?? []);
+      }
+    } catch (e) {
+      setError('Failed to load playlists');
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { void fetchPlaylists(); }, []);
+
+  const handlePlaylistClick = async (playlistId: string) => {
+    setLoadingPlaylist(playlistId);
+    setError('');
+    try {
+      const result = await call<[string], TrackInfo & { error?: string }>('load_playlist', playlistId);
+      if (result.error) {
+        setError(result.error);
+      } else if (result.url) {
+        await playTrack(result as TrackInfo);
+      }
+    } catch (e) {
+      setError('Failed to load playlist');
+    }
+    setLoadingPlaylist(null);
+  };
+
+  if (loading) {
+    return (
+      <Section>
+        <div style={{ padding: '16px 12px', color: 'var(--gpSystemLighterGrey)', fontSize: '12px' }}>
+          Loading playlists...
+        </div>
+      </Section>
+    );
+  }
+
+  if (error) {
+    return (
+      <Section>
+        <div style={{ padding: '8px 12px', color: '#ff6b6b', fontSize: '12px' }}>{error}</div>
+      </Section>
+    );
+  }
+
+  if (playlists.length === 0) {
+    return (
+      <Section>
+        <div style={{ padding: '8px 12px', color: 'var(--gpSystemLighterGrey)', fontSize: '12px' }}>
+          No playlists found
+        </div>
+      </Section>
+    );
+  }
+
+  return (
+    <Section>
+      {playlists.map((playlist) => {
+        const isLiked = playlist.playlistId === 'LM';
+        const isLoading = loadingPlaylist === playlist.playlistId;
+
+        return (
+          <Focusable key={playlist.playlistId}>
+            <DialogButton
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                height: 'auto',
+                minHeight: '48px',
+                padding: '12px 16px',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderRadius: '0',
+                gap: '12px',
+                opacity: isLoading ? 0.6 : 1,
+              }}
+              onClick={() => { if (!isLoading) void handlePlaylistClick(playlist.playlistId); }}
+            >
+              {/* Icon */}
+              <div style={{
+                width: '36px', height: '36px', flexShrink: 0,
+                background: isLiked ? 'rgba(255, 80, 80, 0.15)' : 'rgba(255,255,255,0.08)',
+                borderRadius: '4px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: isLiked ? '#ff5050' : 'var(--gpSystemLighterGrey)',
+              }}>
+                {isLiked ? <FaHeart size={16} /> : <FaMusic size={16} />}
+              </div>
+
+              {/* Text */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontWeight: isLiked ? 'bold' : 'normal',
+                  fontSize: '14px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {isLoading ? 'Loading...' : playlist.title}
+                </div>
+                {playlist.count !== null && (
+                  <div style={{ fontSize: '11px', color: 'var(--gpSystemLighterGrey)', marginTop: '2px' }}>
+                    {playlist.count} tracks
+                  </div>
+                )}
+              </div>
+            </DialogButton>
+          </Focusable>
+        );
+      })}
+    </Section>
+  );
+};

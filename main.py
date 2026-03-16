@@ -352,6 +352,31 @@ class Plugin:
             return {"error": "Failed to get streaming URL"}
         return result
 
+    # ── Library ─────────────────────────────────────────────────────
+
+    async def get_library_playlists(self):
+        if not self.ytmusic:
+            return {"error": "Not authenticated"}
+        try:
+            playlists = self.ytmusic.get_library_playlists(limit=50)
+            result = []
+            # Liked Songs first
+            result.append({
+                "playlistId": "LM",
+                "title": "Liked Songs",
+                "count": None,
+            })
+            for p in playlists:
+                result.append({
+                    "playlistId": p.get("playlistId", ""),
+                    "title": p.get("title", "Unknown Playlist"),
+                    "count": p.get("count"),
+                })
+            return {"playlists": result}
+        except Exception as e:
+            decky.logger.error(f"Failed to get library playlists: {e}")
+            return {"error": str(e)}
+
     # ── Diagnostic ──────────────────────────────────────────────────
 
     async def test_api(self):

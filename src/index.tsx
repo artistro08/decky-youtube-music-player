@@ -1,5 +1,5 @@
 import { ButtonItem, Tabs, staticClasses, DialogButton, Focusable, Navigation } from '@decky/ui';
-import { definePlugin, routerHook, call } from '@decky/api';
+import { definePlugin, routerHook } from '@decky/api';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { FaMusic } from 'react-icons/fa';
 import { BsGearFill } from 'react-icons/bs';
@@ -7,9 +7,10 @@ import { BsGearFill } from 'react-icons/bs';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { PlayerView } from './components/PlayerView';
 import { QueueView } from './components/QueueView';
+import { LibraryView } from './components/LibraryView';
 import { Section } from './components/Section';
 import { SettingsPage } from './components/SettingsPage';
-import { initAudio, destroyAudio, playTrack, type TrackInfo } from './services/audioManager';
+import { initAudio, destroyAudio } from './services/audioManager';
 
 const SETTINGS_ROUTE = '/youtube-music-settings';
 
@@ -76,6 +77,7 @@ const TabsContainer = memo(() => {
   const tabItems = useMemo(() => [
     { id: 'player', title: 'Player', content: <PlayerView /> },
     { id: 'queue', title: 'Queue', content: <QueueView /> },
+    { id: 'library', title: 'Library', content: <LibraryView /> },
   ], []);
 
   return (
@@ -108,8 +110,6 @@ const Content = () => {
 const PluginContentWrapper = () => {
   const { authenticated } = usePlayer();
   const [activeTab, setActiveTab] = useState<string>('player');
-  const [testResults, setTestResults] = useState<Record<string, unknown> | null>(null);
-  const [testLoading, setTestLoading] = useState(false);
 
   // If not authenticated, prompt user to go to settings
   if (!authenticated) {
@@ -130,53 +130,11 @@ const PluginContentWrapper = () => {
     );
   }
 
-  // Temporary: diagnostic test
-  const handleTestApi = async () => {
-    setTestLoading(true);
-    setTestResults(null);
-    try {
-      const result = await call<[], Record<string, unknown>>('test_api');
-      setTestResults(result);
-    } catch (e) {
-      setTestResults({ error: String(e) });
-    }
-    setTestLoading(false);
-  };
-
-  // Temporary: test button to load a playlist
-  const handleLoadLikedSongs = async () => {
-    try {
-      const result = await call<[string], TrackInfo & { error?: string }>('load_playlist', 'LM');
-      if (!result.error && result.url) {
-        await playTrack(result);
-      } else {
-        setTestResults({ load_error: result.error || 'No URL returned' });
-      }
-    } catch (e) {
-      setTestResults({ load_error: String(e) });
-    }
-  };
-
-  // Load a specific playlist by ID from test results
-  const handleLoadPlaylist = async (playlistId: string) => {
-    try {
-      const result = await call<[string], TrackInfo & { error?: string }>('load_playlist', playlistId);
-      if (!result.error && result.url) {
-        await playTrack(result);
-        setTestResults(null);
-      } else {
-        setTestResults({ load_error: result.error || 'No URL returned' });
-      }
-    } catch (e) {
-      setTestResults({ load_error: String(e) });
-    }
-  };
-
   if (!Tabs) {
     return (
       <>
         <Section>
-          {(['player', 'queue'] as const).map((id) => (
+          {(['player', 'queue', 'library'] as const).map((id) => (
             <ButtonItem key={id} onClick={() => setActiveTab(id)}>
               {activeTab === id
                 ? `▶ ${id.charAt(0).toUpperCase() + id.slice(1)}`
@@ -186,34 +144,12 @@ const PluginContentWrapper = () => {
         </Section>
         {activeTab === 'player' && <PlayerView />}
         {activeTab === 'queue' && <QueueView />}
+        {activeTab === 'library' && <LibraryView />}
       </>
     );
   }
 
-  return (
-    <>
-      {/* Temporary test buttons — removed when Library tab is added in Phase 6 */}
-      <Section>
-        <ButtonItem onClick={() => { void handleTestApi(); }}>
-          {testLoading ? 'Testing...' : 'Test API'}
-        </ButtonItem>
-        <ButtonItem onClick={() => { void handleLoadLikedSongs(); }}>
-          Load Liked Songs
-        </ButtonItem>
-        {testResults && (
-          <div style={{ padding: '8px 12px', fontSize: '10px', color: 'var(--gpSystemLighterGrey)', whiteSpace: 'pre-wrap', maxHeight: '200px', overflow: 'auto' }}>
-            {JSON.stringify(testResults, null, 2)}
-            {testResults.first_playlist ? (
-              <ButtonItem onClick={() => { void handleLoadPlaylist(String((testResults.first_playlist as Record<string, unknown>).playlistId)); }}>
-                {'Load: ' + String((testResults.first_playlist as Record<string, unknown>).title)}
-              </ButtonItem>
-            ) : null}
-          </div>
-        )}
-      </Section>
-      <TabsContainer />
-    </>
-  );
+  return <TabsContainer />;
 };
 
 const onSettingsClick = () => {
