@@ -142,6 +142,7 @@ const PluginContentWrapper = () => {
         }}>
           Open Settings
         </PaddedButtonItem>
+        <div style={{ height: '16px' }} />
       </div>
     );
   }
