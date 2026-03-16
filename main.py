@@ -116,7 +116,7 @@ class Plugin:
                 decky.logger.info(f"Got streaming URL for {video_id}")
                 return url
             else:
-                decky.logger.warning(f"yt-dlp returned no URL for {video_id}. stderr: {result.stderr[:200]}")
+                decky.logger.warning(f"yt-dlp returned no URL for {video_id}. stderr: {result.stderr[-500:]}")
                 return None
         except subprocess.TimeoutExpired:
             decky.logger.error(f"yt-dlp timed out for {video_id}")
@@ -347,7 +347,7 @@ class Plugin:
                 results["ytdlp_url"] = url[:100] + "..."
             else:
                 results["ytdlp_stdout"] = proc.stdout[:200]
-                results["ytdlp_stderr"] = proc.stderr[:300]
+                results["ytdlp_stderr"] = proc.stderr[-500:]
         except Exception as e:
             results["ytdlp_error"] = str(e)[:300]
 
