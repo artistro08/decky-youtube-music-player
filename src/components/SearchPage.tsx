@@ -50,6 +50,7 @@ export const SearchPage = () => {
       } else if (result.url) {
         await playTrack(result as TrackInfo);
         Navigation.NavigateBack();
+        Navigation.OpenQuickAccessMenu();
         return;
       }
     } catch (e) {

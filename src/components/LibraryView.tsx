@@ -1,7 +1,7 @@
-import { DialogButton, Focusable } from '@decky/ui';
+import { DialogButton, Focusable, Navigation } from '@decky/ui';
 import { call } from '@decky/api';
 import { useEffect, useState } from 'react';
-import { FaHeart, FaMusic } from 'react-icons/fa';
+import { FaHeart, FaMusic, FaSearch } from 'react-icons/fa';
 import { playTrack, type TrackInfo } from '../services/audioManager';
 import { Section } from './Section';
 
@@ -83,6 +83,38 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
 
   return (
     <Section>
+      {/* Search button — pinned at top */}
+      <Focusable
+        style={{ display: 'flex', alignItems: 'stretch', marginTop: '2px', marginBottom: '2px' }}
+      >
+        <DialogButton
+          style={{
+            flex: 1,
+            textAlign: 'left',
+            height: 'auto',
+            minHeight: '44px',
+            padding: '0',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'stretch',
+            borderRadius: '0',
+            overflow: 'hidden',
+          }}
+          onClick={() => {
+            Navigation.CloseSideMenus();
+            Navigation.Navigate('/youtube-music-search');
+          }}
+        >
+          <div style={{ width: '62px', height: '62px', flexShrink: 0, alignSelf: 'center', background: 'rgba(66, 133, 244, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4285f4' }}>
+            <FaSearch size={22} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '13px' }}>Search</div>
+            <div style={{ fontSize: '11px', color: 'var(--gpSystemLighterGrey)', marginTop: '2px' }}>Find songs to play</div>
+          </div>
+        </DialogButton>
+      </Focusable>
+
       {error && (
         <div style={{ padding: '8px 12px', color: '#ff6b6b', fontSize: '12px' }}>{error}</div>
       )}

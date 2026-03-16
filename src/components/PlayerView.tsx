@@ -1,7 +1,7 @@
-import { ButtonItem, DialogButton, Focusable, ToggleField, Navigation } from '@decky/ui';
+import { ButtonItem, DialogButton, Focusable, ToggleField } from '@decky/ui';
 import { call } from '@decky/api';
 import { useEffect, useRef, useState } from 'react';
-import { FaPause, FaRandom, FaMusic, FaSearch } from 'react-icons/fa';
+import { FaPause, FaRandom, FaMusic } from 'react-icons/fa';
 import { IoPlay, IoPlaySkipBack, IoPlaySkipForward } from 'react-icons/io5';
 import { MdRepeat, MdRepeatOne } from 'react-icons/md';
 import { AiOutlineLike, AiFillLike, AiOutlineDislike, AiFillDislike } from 'react-icons/ai';
@@ -89,41 +89,6 @@ const RepeatButton = ({ repeat, onToggle }: { repeat: string; onToggle: () => vo
       >
         {REPEAT_ICONS[repeat] ?? REPEAT_ICONS.NONE}
         Repeat: {REPEAT_LABELS[repeat] ?? 'Off'}
-      </DialogButton>
-    </Focusable>
-  );
-};
-
-const SearchButton = () => {
-  const [focused, setFocused] = useState(false);
-
-  return (
-    <Focusable
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-    >
-      <DialogButton
-        style={{
-          height: '42px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          gap: '6px',
-          paddingLeft: '19px',
-          paddingRight: '19px',
-          borderRadius: '0',
-          color: 'white',
-          background: focused ? '#32373D' : '#0d141c',
-          animation: focused ? 'ytm-repeat-focus 0.3s ease' : 'none',
-          transition: 'background 0.2s ease',
-        }}
-        onClick={() => {
-          Navigation.CloseSideMenus();
-          Navigation.Navigate('/youtube-music-search');
-        }}
-      >
-        <FaSearch size={14} />
-        Search
       </DialogButton>
     </Focusable>
   );
@@ -282,10 +247,6 @@ export const PlayerView = () => {
         }} />
       </Section>
 
-      {/* Search */}
-      <Section>
-        <SearchButton />
-      </Section>
     </>
   );
 };
