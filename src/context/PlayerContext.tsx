@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useReducer, type FC, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useReducer, useCallback, type FC, type ReactNode } from 'react';
 import { call } from '@decky/api';
 import type { PlayerState } from '../types';
 import {
@@ -37,10 +37,22 @@ const reducer = (state: PlayerState, action: Action): PlayerState => {
   }
 };
 
-const PlayerContext = createContext<PlayerState>(defaultState);
+interface PlayerContextValue {
+  state: PlayerState;
+  updateState: (partial: Partial<PlayerState>) => void;
+}
+
+const PlayerContext = createContext<PlayerContextValue>({
+  state: defaultState,
+  updateState: () => {},
+});
 
 export const PlayerProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, defaultState);
+
+  const updateState = useCallback((partial: Partial<PlayerState>) => {
+    dispatch({ type: 'UPDATE', payload: partial });
+  }, []);
 
   // Sync with audio manager on mount (panel open)
   useEffect(() => {
@@ -64,7 +76,7 @@ export const PlayerProvider: FC<{ children: ReactNode }> = ({ children }) => {
           payload: {
             shuffle: ps.shuffle,
             repeat: ps.repeat as PlayerState['repeat'],
-            volume: ps.volume * 100, // backend stores 0-1, UI uses 0-100
+            volume: ps.volume * 100,
           },
         });
       } catch (e) {
@@ -95,7 +107,10 @@ export const PlayerProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
   }, []);
 
-  return <PlayerContext.Provider value={state}>{children}</PlayerContext.Provider>;
+  return <PlayerContext.Provider value={{ state, updateState }}>{children}</PlayerContext.Provider>;
 };
 
-export const usePlayer = (): PlayerState => useContext(PlayerContext);
+export const usePlayer = () => {
+  const { state, updateState } = useContext(PlayerContext);
+  return { ...state, updateState };
+};

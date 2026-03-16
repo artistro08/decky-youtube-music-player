@@ -49,7 +49,7 @@ const PaddedToggle = (props: React.ComponentProps<typeof ToggleField>) => {
   return <div ref={ref}><ToggleField {...props} /></div>;
 };
 
-const RepeatButton = ({ repeat }: { repeat: string }) => {
+const RepeatButton = ({ repeat, onToggle }: { repeat: string; onToggle: () => void }) => {
   const [focused, setFocused] = useState(false);
 
   useEffect(() => {
@@ -63,10 +63,6 @@ const RepeatButton = ({ repeat }: { repeat: string }) => {
     document.head.appendChild(el);
     return () => el.remove();
   }, []);
-
-  const handleRepeatToggle = async () => {
-    await call('toggle_repeat');
-  };
 
   return (
     <Focusable
@@ -88,7 +84,7 @@ const RepeatButton = ({ repeat }: { repeat: string }) => {
           animation: focused ? 'ytm-repeat-focus 0.3s ease' : 'none',
           transition: 'background 0.2s ease',
         }}
-        onClick={() => { void handleRepeatToggle(); }}
+        onClick={onToggle}
       >
         {REPEAT_ICONS[repeat] ?? REPEAT_ICONS.NONE}
         Repeat: {REPEAT_LABELS[repeat] ?? 'Off'}
@@ -98,14 +94,15 @@ const RepeatButton = ({ repeat }: { repeat: string }) => {
 };
 
 export const PlayerView = () => {
-  const { track, isPlaying, shuffle: isShuffled, repeat } = usePlayer();
+  const { track, isPlaying, shuffle: isShuffled, repeat, updateState } = usePlayer();
 
   const albumArt = track?.albumArt;
   const title = track?.title ?? 'Nothing playing';
   const artist = track?.artist ?? '';
 
   const handleShuffleToggle = async () => {
-    await call('toggle_shuffle');
+    const result = await call<[], { shuffle: boolean }>('toggle_shuffle');
+    updateState({ shuffle: result.shuffle });
   };
 
   return (
@@ -178,7 +175,12 @@ export const PlayerView = () => {
           checked={isShuffled}
           onChange={() => { void handleShuffleToggle(); }}
         />
-        <RepeatButton repeat={repeat} />
+        <RepeatButton repeat={repeat} onToggle={() => {
+          void (async () => {
+            const result = await call<[], { repeat: string }>('toggle_repeat');
+            updateState({ repeat: result.repeat as 'NONE' | 'ALL' | 'ONE' });
+          })();
+        }} />
       </Section>
     </>
   );
