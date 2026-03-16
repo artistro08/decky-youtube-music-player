@@ -60,7 +60,7 @@ export const SearchPage = () => {
   };
 
   return (
-    <div style={{ padding: '40px 28px 16px' }}>
+    <div style={{ padding: '52px 28px 16px' }}>
       {/* Back button + title */}
       <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <DialogButton
