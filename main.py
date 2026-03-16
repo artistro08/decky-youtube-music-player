@@ -10,6 +10,11 @@ _py_modules = os.path.join(decky.DECKY_PLUGIN_DIR, "py_modules")
 if _py_modules not in sys.path:
     sys.path.insert(0, _py_modules)
 
+# Clear any cached partial xml module so Python finds our complete version
+for _key in list(sys.modules.keys()):
+    if _key == 'xml' or _key.startswith('xml.'):
+        del sys.modules[_key]
+
 BROWSER_AUTH_FILE = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "browser.json")
 
 class Plugin:
