@@ -73,12 +73,11 @@ export const PlayerProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
       // Fetch auth state
       try {
-        const auth = await call<[], { has_credentials: boolean; authenticated: boolean }>('get_auth_state');
+        const auth = await call<[], { authenticated: boolean }>('get_auth_state');
         dispatch({
           type: 'UPDATE',
           payload: {
             authenticated: auth.authenticated,
-            hasCredentials: auth.has_credentials,
           },
         });
       } catch (e) {

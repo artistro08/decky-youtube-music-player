@@ -1,110 +1,51 @@
-import { ButtonItem, DialogButton, TextField, Focusable, Navigation } from '@decky/ui';
+import { ButtonItem, DialogButton, Focusable, Navigation } from '@decky/ui';
 import { call } from '@decky/api';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Section } from './Section';
 
 type AuthState = {
-  has_credentials: boolean;
   authenticated: boolean;
-  client_id: string;
-  client_secret: string;
-};
-
-type OAuthStartResult = {
-  url?: string;
-  code?: string;
-  error?: string;
-};
-
-type OAuthCheckResult = {
-  status: 'pending' | 'authenticated' | 'timeout' | 'error' | 'no_pending';
-  message?: string;
 };
 
 export const SettingsPage = () => {
   const [authState, setAuthState] = useState<AuthState | null>(null);
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
-  const [editing, setEditing] = useState(false);
-  const [oauthUrl, setOauthUrl] = useState('');
-  const [oauthCode, setOauthCode] = useState('');
-  const [oauthStatus, setOauthStatus] = useState<string>('');
+  const [headersRaw, setHeadersRaw] = useState('');
   const [error, setError] = useState('');
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  // Fetch auth state on mount
   useEffect(() => {
     void (async () => {
       const state = await call<[], AuthState>('get_auth_state');
       setAuthState(state);
-      setClientId(state.client_id);
-      setClientSecret(state.client_secret);
     })();
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
   }, []);
 
-  const handleSaveCredentials = async () => {
-    setError('');
-    await call<[string, string], { success: boolean }>('save_credentials', clientId.trim(), clientSecret.trim());
-    const state = await call<[], AuthState>('get_auth_state');
-    setAuthState(state);
-    setEditing(false);
-  };
-
-  const handleStartOAuth = async () => {
-    setError('');
-    setOauthStatus('starting');
-    const result = await call<[], OAuthStartResult>('start_oauth');
-    if (result.error) {
-      setError(result.error);
-      setOauthStatus('');
+  const handleSaveHeaders = async () => {
+    if (!headersRaw.trim()) {
+      setError('Please paste your request headers.');
       return;
     }
-    setOauthUrl(result.url ?? '');
-    setOauthCode(result.code ?? '');
-    setOauthStatus('waiting');
-
-    // Poll every 5 seconds
-    pollRef.current = setInterval(async () => {
-      const check = await call<[], OAuthCheckResult>('check_oauth_status');
-      if (check.status === 'authenticated') {
-        if (pollRef.current) clearInterval(pollRef.current);
-        setOauthStatus('');
-        setOauthUrl('');
-        setOauthCode('');
+    setError('');
+    setSaving(true);
+    try {
+      const result = await call<[string], { success?: boolean; error?: string }>('save_browser_headers', headersRaw.trim());
+      if (result.error) {
+        setError(result.error);
+      } else {
         const state = await call<[], AuthState>('get_auth_state');
         setAuthState(state);
-      } else if (check.status === 'timeout') {
-        if (pollRef.current) clearInterval(pollRef.current);
-        setOauthStatus('');
-        setOauthUrl('');
-        setOauthCode('');
-        setError('Authorization timed out. Please try again.');
-      } else if (check.status === 'error') {
-        if (pollRef.current) clearInterval(pollRef.current);
-        setOauthStatus('');
-        setOauthUrl('');
-        setOauthCode('');
-        setError(check.message ?? 'Unknown error');
+        setHeadersRaw('');
       }
-    }, 5000);
+    } catch (e) {
+      setError(String(e));
+    }
+    setSaving(false);
   };
 
   const handleSignOut = async () => {
     await call<[], { success: boolean }>('sign_out');
-    setOauthStatus('');
-    setOauthUrl('');
-    setOauthCode('');
     const state = await call<[], AuthState>('get_auth_state');
     setAuthState(state);
-  };
-
-  const handleEdit = () => {
-    setEditing(true);
-    setClientId(authState?.client_id ?? '');
-    setClientSecret(authState?.client_secret ?? '');
   };
 
   if (!authState) {
@@ -114,9 +55,6 @@ export const SettingsPage = () => {
       </Section>
     );
   }
-
-  // State 1: No credentials saved (or editing)
-  const showCredentialForm = !authState.has_credentials || editing;
 
   return (
     <div style={{ padding: '0' }}>
@@ -138,88 +76,61 @@ export const SettingsPage = () => {
         </Section>
       )}
 
-      {showCredentialForm ? (
-        /* Credential entry form */
-        <Section title="YouTube Music Setup">
-          <div style={{ padding: '8px 16px' }}>
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--gpSystemLighterGrey)', marginBottom: '4px' }}>Client ID</div>
-              <TextField
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-              />
-            </div>
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--gpSystemLighterGrey)', marginBottom: '4px' }}>Client Secret</div>
-              <TextField
-                value={clientSecret}
-                onChange={(e) => setClientSecret(e.target.value)}
-              />
-            </div>
-            <ButtonItem onClick={() => void handleSaveCredentials()}>
-              Save Credentials
-            </ButtonItem>
-            {editing && (
-              <ButtonItem onClick={() => setEditing(false)}>
-                Cancel
-              </ButtonItem>
-            )}
-          </div>
+      {authState.authenticated ? (
+        /* Authenticated state */
+        <Section>
+          <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px' }}>
+            <span style={{ color: '#4caf50', fontSize: '13px' }}>Authenticated ✓</span>
+            <DialogButton
+              style={{ width: 'auto', minWidth: '80px', padding: '4px 12px', fontSize: '12px' }}
+              onClick={() => void handleSignOut()}
+            >
+              Sign Out
+            </DialogButton>
+          </Focusable>
         </Section>
       ) : (
+        /* Not authenticated — show instructions + header paste */
         <>
-          {/* Credentials saved indicator + Edit button */}
-          <Section>
-            <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px' }}>
-              <span style={{ color: '#4caf50', fontSize: '13px' }}>Credentials ✓</span>
-              <DialogButton
-                style={{ width: 'auto', minWidth: '60px', padding: '4px 12px', fontSize: '12px' }}
-                onClick={handleEdit}
-              >
-                Edit
-              </DialogButton>
-            </Focusable>
+          <Section title="Setup Instructions">
+            <div style={{ padding: '8px 16px', fontSize: '12px', color: 'var(--gpSystemLighterGrey)', lineHeight: '1.5' }}>
+              <div style={{ marginBottom: '8px' }}>1. Open a browser and go to <span style={{ color: 'white' }}>music.youtube.com</span></div>
+              <div style={{ marginBottom: '8px' }}>2. Log in to your account</div>
+              <div style={{ marginBottom: '8px' }}>3. Open Developer Tools (F12) → Network tab</div>
+              <div style={{ marginBottom: '8px' }}>4. Click around in YouTube Music (e.g. click Library)</div>
+              <div style={{ marginBottom: '8px' }}>5. Find a request to <span style={{ color: 'white' }}>/browse</span> with status 200</div>
+              <div style={{ marginBottom: '8px' }}>6. Copy the request headers (Firefox: right-click → Copy → Copy Request Headers)</div>
+              <div>7. Paste them below and click Save</div>
+            </div>
           </Section>
 
-          {/* Auth status */}
-          {authState.authenticated ? (
-            /* State 4: Fully authenticated */
-            <Section>
-              <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px' }}>
-                <span style={{ color: '#4caf50', fontSize: '13px' }}>Authenticated ✓</span>
-                <DialogButton
-                  style={{ width: 'auto', minWidth: '80px', padding: '4px 12px', fontSize: '12px' }}
-                  onClick={() => void handleSignOut()}
-                >
-                  Sign Out
-                </DialogButton>
-              </Focusable>
-            </Section>
-          ) : oauthStatus === 'waiting' ? (
-            /* State 3: Sign-in initiated */
-            <Section title="Sign In">
-              <div style={{ padding: '8px 16px' }}>
-                <div style={{ fontSize: '13px', marginBottom: '8px' }}>
-                  Go to: <span style={{ fontWeight: 'bold', color: 'white' }}>{oauthUrl}</span>
-                </div>
-                <div style={{ fontSize: '13px', marginBottom: '8px' }}>
-                  Enter code: <span style={{ fontWeight: 'bold', color: 'white', fontSize: '18px' }}>{oauthCode}</span>
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--gpSystemLighterGrey)' }}>
-                  Waiting for authorization...
-                </div>
-              </div>
-            </Section>
-          ) : (
-            /* State 2: Credentials saved, not authenticated */
-            <Section>
-              <div style={{ padding: '8px 16px' }}>
-                <ButtonItem onClick={() => void handleStartOAuth()}>
-                  Sign In with Google
+          <Section title="Request Headers">
+            <div style={{ padding: '8px 16px' }}>
+              <textarea
+                value={headersRaw}
+                onChange={(e) => setHeadersRaw(e.target.value)}
+                placeholder="Paste request headers here..."
+                style={{
+                  width: '100%',
+                  minHeight: '120px',
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '4px',
+                  padding: '8px',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ marginTop: '8px' }}>
+                <ButtonItem onClick={() => void handleSaveHeaders()}>
+                  {saving ? 'Saving...' : 'Save & Connect'}
                 </ButtonItem>
               </div>
-            </Section>
-          )}
+            </div>
+          </Section>
         </>
       )}
     </div>
