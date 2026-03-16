@@ -9,6 +9,14 @@ let playStateListeners: Array<(playing: boolean) => void> = [];
 // Named handler references for proper addEventListener/removeEventListener pairing
 function onAudioEnded() { void handleTrackEnded(); }
 function onAudioError() { void handleError(); }
+function onAudioPause() {
+  // Detect system-initiated pause (e.g. sleep/wake) and sync state
+  if (isPlaying) {
+    isPlaying = false;
+    notifyPlayState(false);
+    void call('pause');
+  }
+}
 
 export interface TrackInfo {
   videoId: string;
@@ -122,6 +130,7 @@ export function initAudio() {
   audioElement.style.display = 'none';
   audioElement.addEventListener('ended', onAudioEnded);
   audioElement.addEventListener('error', onAudioError);
+  audioElement.addEventListener('pause', onAudioPause);
   document.body.appendChild(audioElement);
 }
 
@@ -132,6 +141,7 @@ export function destroyAudio() {
     audioElement.src = '';
     audioElement.removeEventListener('ended', onAudioEnded);
     audioElement.removeEventListener('error', onAudioError);
+    audioElement.removeEventListener('pause', onAudioPause);
     audioElement.remove();
     audioElement = null;
   }
@@ -148,10 +158,11 @@ export async function playTrack(track: TrackInfo) {
 
 /** Pause playback. */
 export function pausePlayback() {
-  audioElement?.pause();
+  // Set isPlaying false BEFORE pause() so onAudioPause listener doesn't double-notify
   isPlaying = false;
   notifyPlayState(false);
   void call('pause');
+  audioElement?.pause();
 }
 
 /** Resume playback. */

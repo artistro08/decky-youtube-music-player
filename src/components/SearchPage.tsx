@@ -60,32 +60,19 @@ export const SearchPage = () => {
   };
 
   return (
-    <div style={{ padding: '52px 28px 16px', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box' }}>
-      {/* Back button + title */}
-      <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-        <DialogButton
-          style={{ width: '40px', minWidth: '40px', height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => Navigation.NavigateBack()}
-        >
-          ←
-        </DialogButton>
-        <span style={{ fontWeight: 'bold', fontSize: '20px' }}>Search</span>
-      </Focusable>
-
+    <div style={{ padding: '52px 0 0', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box' }}>
       {/* Search input */}
-      <Section>
-        <div style={{ padding: '8px 16px' }}>
-          <TextField
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div style={{ marginTop: '8px' }}>
-            <ButtonItem onClick={() => { void handleSearch(); }}>
-              {searching ? 'Searching...' : 'Search'}
-            </ButtonItem>
-          </div>
+      <div style={{ flexShrink: 0, padding: '0 16px 8px' }}>
+        <TextField
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <div style={{ marginTop: '8px' }}>
+          <ButtonItem onClick={() => { void handleSearch(); }}>
+            {searching ? 'Searching...' : 'Search'}
+          </ButtonItem>
         </div>
-      </Section>
+      </div>
 
       {/* Scrollable results area */}
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
