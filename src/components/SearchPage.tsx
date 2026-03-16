@@ -62,17 +62,17 @@ export const SearchPage = () => {
   return (
     <div style={{ padding: '52px 0 0', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box' }}>
       {/* Search input */}
-      <div style={{ flexShrink: 0, padding: '0 16px 8px' }}>
-        <TextField
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <div style={{ marginTop: '8px' }}>
-          <ButtonItem onClick={() => { void handleSearch(); }}>
-            {searching ? 'Searching...' : 'Search'}
-          </ButtonItem>
+      <Section>
+        <div style={{ padding: '8px 12px' }}>
+          <TextField
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
-      </div>
+        <ButtonItem onClick={() => { void handleSearch(); }}>
+          {searching ? 'Searching...' : 'Search'}
+        </ButtonItem>
+      </Section>
 
       {/* Scrollable results area */}
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>

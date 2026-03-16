@@ -63,15 +63,7 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
     );
   }
 
-  if (error && playlists.length === 0) {
-    return (
-      <Section>
-        <div style={{ padding: '8px 12px', color: '#ff6b6b', fontSize: '12px' }}>{error}</div>
-      </Section>
-    );
-  }
-
-  if (playlists.length === 0) {
+  if (playlists.length === 0 && !error) {
     return (
       <Section>
         <div style={{ padding: '8px 12px', color: 'var(--gpSystemLighterGrey)', fontSize: '12px' }}>

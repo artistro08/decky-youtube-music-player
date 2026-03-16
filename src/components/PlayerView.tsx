@@ -124,8 +124,13 @@ export const PlayerView = () => {
     const prevRating = rating;
     setRating(targetRating);
     try {
-      await call<[string, string], { rating?: string; error?: string }>('rate_song', track.videoId, targetRating);
-    } catch {
+      const result = await call<[string, string], { rating?: string; error?: string }>('rate_song', track.videoId, targetRating);
+      if (result.error) {
+        console.error('[YTM] Rate song failed:', result.error);
+        setRating(prevRating);
+      }
+    } catch (e) {
+      console.error('[YTM] Rate song error:', e);
       setRating(prevRating);
     }
   };
