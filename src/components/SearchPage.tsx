@@ -62,11 +62,12 @@ export const SearchPage = () => {
     <div style={{ padding: '52px 0 0', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box' }}>
       {/* Search input */}
       <div style={{ flexShrink: 0, padding: '8px 12px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--gpSystemLighterGrey)', marginBottom: '6px' }}>Search for songs</div>
         <TextField
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div style={{ marginTop: '8px', padding: '0 7px' }}>
+        <div style={{ marginTop: '8px', marginLeft: '-10px', marginRight: '-10px', padding: '0 10px' }}>
           <ButtonItem onClick={() => { void handleSearch(); }}>
             {searching ? 'Searching...' : 'Search'}
           </ButtonItem>
