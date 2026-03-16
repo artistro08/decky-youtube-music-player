@@ -20,17 +20,18 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
   const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [hasMore, setHasMore] = useState(true);
+  const [currentLimit, setCurrentLimit] = useState(25);
 
   const fetchPlaylists = async (limit = 25) => {
     setLoading(true);
     setError('');
     try {
-      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string; has_more?: boolean }>('get_library_playlists', limit);
+      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string }>('get_library_playlists', limit);
       if (result.error) {
         setError(result.error);
       } else {
         setPlaylists(result.playlists ?? []);
-        setHasMore(result.has_more ?? false);
+        setCurrentLimit(limit);
       }
     } catch (e) {
       setError('Failed to load playlists');
@@ -41,12 +42,17 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
   const handleLoadMore = async () => {
     setLoadingMore(true);
     try {
-      // Request more: current count (minus Liked Songs) + 25
-      const newLimit = (playlists.length - 1) + 25;
-      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string; has_more?: boolean }>('get_library_playlists', newLimit);
+      const newLimit = currentLimit + 25;
+      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string }>('get_library_playlists', newLimit);
       if (!result.error) {
-        setPlaylists(result.playlists ?? []);
-        setHasMore(result.has_more ?? false);
+        const fetched = result.playlists ?? [];
+        // If we didn't get any new playlists, there are no more
+        if (fetched.length <= playlists.length) {
+          setHasMore(false);
+        } else {
+          setPlaylists(fetched);
+          setCurrentLimit(newLimit);
+        }
       }
     } catch (e) {
       // silently fail
