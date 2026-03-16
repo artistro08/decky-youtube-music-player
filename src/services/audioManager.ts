@@ -161,6 +161,9 @@ export function resumePlayback() {
       isPlaying = true;
       notifyPlayState(true);
       void call('resume');
+    }).catch((e) => {
+      console.error('[YTM] resume failed:', e);
+      notifyPlayState(false);
     });
   }
 }

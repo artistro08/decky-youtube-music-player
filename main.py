@@ -122,12 +122,11 @@ class Plugin:
             )
 
             url = result.stdout.strip()
-            if url and url.startswith('http'):
-                decky.logger.info(f"Got streaming URL for {video_id}")
-                return url
-            else:
-                decky.logger.warning(f"yt-dlp returned no URL for {video_id}. stderr: {result.stderr[-500:]}")
+            if result.returncode != 0 or not url or not url.startswith('http'):
+                decky.logger.warning(f"yt-dlp failed for {video_id}. rc={result.returncode} stderr: {result.stderr[-500:]}")
                 return None
+            decky.logger.info(f"Got streaming URL for {video_id}")
+            return url
         except subprocess.TimeoutExpired:
             decky.logger.error(f"yt-dlp timed out for {video_id}")
             return None
@@ -258,6 +257,10 @@ class Plugin:
     async def set_volume(self, value):
         """Set volume. value is 0-100 from frontend."""
         import subprocess
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return {"error": f"Invalid volume value: {value!r}"}
         self.volume = max(0, min(100, value)) / 100.0  # store as 0.0-1.0
 
         # Try to set PulseAudio volume for CEF sink-inputs
@@ -426,6 +429,8 @@ class Plugin:
             return {"error": "Not authenticated"}
 
         try:
+            self.is_playing = False  # stop old playback state before rebuilding queue
+
             if playlist_id == "LM":
                 playlist_data = self.ytmusic.get_liked_songs(limit=50)
             else:

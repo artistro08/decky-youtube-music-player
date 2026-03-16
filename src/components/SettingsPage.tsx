@@ -42,9 +42,13 @@ export const SettingsPage = () => {
   };
 
   const handleSignOut = async () => {
-    await call<[], { success: boolean }>('sign_out');
-    const state = await call<[], AuthState>('get_auth_state');
-    setAuthState(state);
+    try {
+      await call<[], { success: boolean }>('sign_out');
+      const state = await call<[], AuthState>('get_auth_state');
+      setAuthState(state);
+    } catch (e) {
+      setError(`Sign out failed: ${String(e)}`);
+    }
   };
 
   if (!authState) {
