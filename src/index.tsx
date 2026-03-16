@@ -14,16 +14,8 @@ import { initAudio, destroyAudio } from './services/audioManager';
 
 const SETTINGS_ROUTE = '/youtube-music-settings';
 
-// Module-scoped tab setter — lets LibraryView switch to Player after loading a playlist
-let setActiveTabGlobal: ((tab: string) => void) | null = null;
-
 const TabsContainer = memo(() => {
   const [activeTab, setActiveTab] = useState<string>('player');
-
-  useEffect(() => {
-    setActiveTabGlobal = setActiveTab;
-    return () => { setActiveTabGlobal = null; };
-  }, []);
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number>(500);
 

@@ -2,8 +2,7 @@ import { DialogButton, Focusable } from '@decky/ui';
 import { call } from '@decky/api';
 import { useEffect, useState } from 'react';
 import { FaHeart, FaMusic } from 'react-icons/fa';
-import type { TrackInfo } from '../types';
-import { playTrack } from '../services/audioManager';
+import { playTrack, type TrackInfo } from '../services/audioManager';
 import { Section } from './Section';
 
 interface PlaylistEntry {

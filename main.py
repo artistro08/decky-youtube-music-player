@@ -77,9 +77,16 @@ class Plugin:
             return {"error": str(e)}
 
     async def sign_out(self):
-        """Sign out — delete browser.json and reset state."""
+        """Sign out — delete browser.json and reset all state."""
         self.authenticated = False
         self.ytmusic = None
+        self.queue = []
+        self.queue_position = 0
+        self.is_playing = False
+        self.shuffle = False
+        self.shuffle_order = []
+        self.repeat = "NONE"
+        self._cached_playlists = None
         if os.path.exists(BROWSER_AUTH_FILE):
             os.remove(BROWSER_AUTH_FILE)
         decky.logger.info("Signed out")
@@ -412,100 +419,7 @@ class Plugin:
             decky.logger.error(f"Failed to get library playlists: {e}")
             return {"error": str(e)}
 
-    # ── Diagnostic ──────────────────────────────────────────────────
-
-    async def test_api(self):
-        """Test ytmusicapi methods with browser auth."""
-        if not self.ytmusic:
-            return {"error": "Not authenticated"}
-
-        results = {}
-        results["auth_type"] = str(self.ytmusic.auth_type)
-
-        # Test search
-        try:
-            sr = self.ytmusic.search("never gonna give you up", filter="songs", limit=1)
-            if sr:
-                results["search"] = "OK"
-                results["search_videoId"] = sr[0].get("videoId", "")
-                results["search_title"] = sr[0].get("title", "")
-            else:
-                results["search"] = "OK but empty"
-        except Exception as e:
-            results["search"] = f"FAIL: {str(e)[:200]}"
-
-        # Test get_song
-        video_id = results.get("search_videoId", "dQw4w9WgXcQ")
-        try:
-            song = self.ytmusic.get_song(video_id)
-            playability = song.get("playabilityStatus", {})
-            results["playability_status"] = playability.get("status", "unknown")
-            results["playability_reason"] = playability.get("reason", "")
-
-            streaming = song.get("streamingData", {})
-            results["has_streamingData"] = bool(streaming)
-            results["expiresInSeconds"] = streaming.get("expiresInSeconds", "none")
-
-            adaptive = streaming.get("adaptiveFormats", [])
-            results["total_formats"] = len(adaptive)
-
-            audio_fmts = [f for f in adaptive if f.get("mimeType", "").startswith("audio/")]
-            results["audio_formats"] = len(audio_fmts)
-
-            if audio_fmts:
-                fmt = audio_fmts[0]
-                results["first_audio_mimeType"] = fmt.get("mimeType", "")
-                results["first_audio_bitrate"] = fmt.get("bitrate", 0)
-                results["has_url"] = bool(fmt.get("url"))
-                results["has_signatureCipher"] = bool(fmt.get("signatureCipher"))
-                if fmt.get("url"):
-                    results["url_preview"] = fmt["url"][:100] + "..."
-                elif fmt.get("signatureCipher"):
-                    results["cipher_preview"] = fmt["signatureCipher"][:100] + "..."
-            else:
-                results["note"] = "No audio formats found"
-
-            # Show top-level keys
-            results["song_keys"] = list(song.keys())
-        except Exception as e:
-            results["get_song"] = f"FAIL: {str(e)[:200]}"
-
-        # Test get_library_playlists
-        try:
-            pl = self.ytmusic.get_library_playlists(limit=3)
-            results["library_playlists"] = f"OK - {len(pl)} playlists"
-        except Exception as e:
-            results["library_playlists"] = f"FAIL: {str(e)[:200]}"
-
-        # Test yt-dlp URL extraction via subprocess
-        try:
-            import subprocess
-            env = os.environ.copy()
-            env['PYTHONPATH'] = _PY_MODULES + ':' + env.get('PYTHONPATH', '')
-            env.pop('LD_LIBRARY_PATH', None)
-            proc = subprocess.run(
-                [
-                    'python3', '-m', 'yt_dlp',
-                    '--print', 'urls',
-                    '-f', 'bestaudio[ext=m4a]/bestaudio',
-                    '--no-warnings', '-q',
-                    f'https://music.youtube.com/watch?v={video_id}',
-                ],
-                capture_output=True, text=True, env=env, timeout=30,
-            )
-            url = proc.stdout.strip()
-            if url and url.startswith('http'):
-                results["ytdlp_url"] = url[:100] + "..."
-            else:
-                results["ytdlp_stdout"] = proc.stdout[:200]
-                results["ytdlp_stderr"] = proc.stderr[-500:]
-        except Exception as e:
-            results["ytdlp_error"] = str(e)[:300]
-
-        decky.logger.info(f"API test results: {json.dumps(results, indent=2, default=str)}")
-        return results
-
-    # ── Playlist loading (temporary test — replaced by Library tab in Phase 6) ──
+    # ── Playlist loading ─────────────────────────────────────────────
 
     async def load_playlist(self, playlist_id):
         if not self.ytmusic:

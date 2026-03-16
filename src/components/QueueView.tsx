@@ -3,8 +3,7 @@ import { call } from '@decky/api';
 import { useEffect, useState } from 'react';
 import { FaMusic } from 'react-icons/fa';
 import { IoVolumeMedium } from 'react-icons/io5';
-import type { TrackInfo } from '../types';
-import { playTrack } from '../services/audioManager';
+import { playTrack, type TrackInfo } from '../services/audioManager';
 import { Section } from './Section';
 
 export const QueueView = () => {
@@ -37,7 +36,7 @@ export const QueueView = () => {
     try {
       const result = await call<[number], TrackInfo & { error?: string }>('jump_to_queue', index);
       if (!result.error && result.url) {
-        await playTrack(result);
+        await playTrack(result as TrackInfo);
       }
       void loadQueue(true);
     } catch (e) {
