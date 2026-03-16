@@ -16,6 +16,18 @@ import { initAudio, destroyAudio } from './services/audioManager';
 const SETTINGS_ROUTE = '/youtube-music-settings';
 const SEARCH_ROUTE = '/youtube-music-search';
 
+const PaddedButtonItem = (props: React.ComponentProps<typeof ButtonItem>) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const first = ref.current?.firstElementChild as HTMLElement | null;
+    if (first) {
+      first.style.paddingLeft = '16px';
+      first.style.paddingRight = '16px';
+    }
+  }, []);
+  return <div ref={ref}><ButtonItem {...props} /></div>;
+};
+
 const TabsContainer = memo(() => {
   const [activeTab, setActiveTab] = useState<string>('player');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -124,14 +136,12 @@ const PluginContentWrapper = () => {
             Set up your YouTube Music credentials in <strong>Settings</strong> to get started.
           </div>
         </div>
-        <div style={{ padding: '0 16px' }}>
-          <ButtonItem onClick={() => {
-            Navigation.CloseSideMenus();
-            Navigation.Navigate(SETTINGS_ROUTE);
-          }}>
-            Open Settings
-          </ButtonItem>
-        </div>
+        <PaddedButtonItem onClick={() => {
+          Navigation.CloseSideMenus();
+          Navigation.Navigate(SETTINGS_ROUTE);
+        }}>
+          Open Settings
+        </PaddedButtonItem>
       </div>
     );
   }
