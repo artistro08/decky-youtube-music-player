@@ -1,4 +1,4 @@
-import { ButtonItem, TextField, DialogButton, Focusable, SidebarNavigation } from '@decky/ui';
+import { ButtonItem, TextField, DialogButton, Focusable, Navigation } from '@decky/ui';
 import { call } from '@decky/api';
 import { useEffect, useState } from 'react';
 
@@ -6,7 +6,7 @@ type AuthState = {
   authenticated: boolean;
 };
 
-const AuthContent = () => {
+export const SettingsPage = () => {
   const [authState, setAuthState] = useState<AuthState | null>(null);
   const [filePath, setFilePath] = useState('/home/deck/headers.txt');
   const [error, setError] = useState('');
@@ -51,22 +51,35 @@ const AuthContent = () => {
   };
 
   if (!authState) {
-    return <div style={{ padding: '16px', color: 'var(--gpSystemLighterGrey)' }}>Loading...</div>;
+    return (
+      <div style={{ padding: '24px 28px', color: 'var(--gpSystemLighterGrey)' }}>Loading...</div>
+    );
   }
 
   return (
-    <div>
+    <div style={{ padding: '16px 28px' }}>
+      {/* Header */}
+      <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+        <DialogButton
+          style={{ width: '40px', minWidth: '40px', height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => Navigation.NavigateBack()}
+        >
+          ←
+        </DialogButton>
+        <span style={{ fontWeight: 'bold', fontSize: '20px' }}>YouTube Music Player Settings</span>
+      </Focusable>
+
       {/* Error display */}
       {error && (
-        <div style={{ padding: '8px 0', color: '#ff6b6b', fontSize: '12px' }}>{error}</div>
+        <div style={{ padding: '12px 0', color: '#ff6b6b', fontSize: '13px' }}>{error}</div>
       )}
 
       {authState.authenticated ? (
         /* Authenticated state */
-        <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
-          <span style={{ color: '#4caf50', fontSize: '13px' }}>Authenticated ✓</span>
+        <Focusable flow-children="horizontal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
+          <span style={{ color: '#4caf50', fontSize: '14px' }}>Authenticated ✓</span>
           <DialogButton
-            style={{ width: 'auto', minWidth: '80px', padding: '4px 12px', fontSize: '12px' }}
+            style={{ width: 'auto', minWidth: '100px', padding: '8px 16px', fontSize: '13px' }}
             onClick={() => void handleSignOut()}
           >
             Sign Out
@@ -75,7 +88,7 @@ const AuthContent = () => {
       ) : (
         /* Not authenticated — show instructions + file path */
         <>
-          <div style={{ fontSize: '12px', color: 'var(--gpSystemLighterGrey)', lineHeight: '1.5', marginBottom: '16px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--gpSystemLighterGrey)', lineHeight: '1.6', marginBottom: '20px' }}>
             <div style={{ marginBottom: '8px' }}>1. On your PC, open a browser and go to <span style={{ color: 'white' }}>music.youtube.com</span></div>
             <div style={{ marginBottom: '8px' }}>2. Log in to your account</div>
             <div style={{ marginBottom: '8px' }}>3. Open Developer Tools (F12) → Network tab</div>
@@ -84,15 +97,16 @@ const AuthContent = () => {
             <div style={{ marginBottom: '8px' }}>6. Copy the request headers to a text file</div>
             <div style={{ marginBottom: '8px' }}>   Firefox: right-click → Copy → Copy Request Headers</div>
             <div style={{ marginBottom: '8px' }}>7. Transfer the text file to your Steam Deck</div>
-            <div style={{ marginBottom: '16px' }}>8. Enter the file path below and click Load</div>
+            <div style={{ marginBottom: '20px' }}>8. Enter the file path below and click Load</div>
           </div>
 
           <div>
+            <div style={{ fontSize: '13px', color: 'var(--gpSystemLighterGrey)', marginBottom: '6px' }}>Headers File Path</div>
             <TextField
               value={filePath}
               onChange={(e) => setFilePath(e.target.value)}
             />
-            <div style={{ marginTop: '8px' }}>
+            <div style={{ marginTop: '12px' }}>
               <ButtonItem onClick={() => void handleLoadFile()}>
                 {saving ? 'Loading...' : 'Load & Connect'}
               </ButtonItem>
@@ -101,19 +115,5 @@ const AuthContent = () => {
         </>
       )}
     </div>
-  );
-};
-
-export const SettingsPage = () => {
-  return (
-    <SidebarNavigation
-      title="YouTube Music"
-      pages={[
-        {
-          title: "Settings",
-          content: <AuthContent />,
-        },
-      ]}
-    />
   );
 };
