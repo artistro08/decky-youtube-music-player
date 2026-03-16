@@ -354,12 +354,11 @@ class Plugin:
 
     # ── Library ─────────────────────────────────────────────────────
 
-    async def get_library_playlists(self, limit=25):
+    async def get_library_playlists(self):
         if not self.ytmusic:
             return {"error": "Not authenticated"}
         try:
-            playlists = self.ytmusic.get_library_playlists(limit=limit)
-            raw_count = len(playlists)
+            playlists = self.ytmusic.get_library_playlists(limit=None)
             result = []
             # Liked Songs first
             result.append({
@@ -380,7 +379,7 @@ class Plugin:
                     "count": p.get("count"),
                     "thumbnail": thumb,
                 })
-            return {"playlists": result, "has_more": raw_count >= limit}
+            return {"playlists": result}
         except Exception as e:
             decky.logger.error(f"Failed to get library playlists: {e}")
             return {"error": str(e)}

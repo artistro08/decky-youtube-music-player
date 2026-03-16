@@ -1,4 +1,4 @@
-import { ButtonItem, DialogButton, Focusable } from '@decky/ui';
+import { DialogButton, Focusable } from '@decky/ui';
 import { call } from '@decky/api';
 import { useEffect, useState } from 'react';
 import { FaHeart, FaMusic } from 'react-icons/fa';
@@ -16,48 +16,23 @@ interface PlaylistEntry {
 export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => void }) => {
   const [playlists, setPlaylists] = useState<PlaylistEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [loadingPlaylist, setLoadingPlaylist] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [hasMore, setHasMore] = useState(true);
-  const [currentLimit, setCurrentLimit] = useState(25);
 
-  const fetchPlaylists = async (limit = 25) => {
+  const fetchPlaylists = async () => {
     setLoading(true);
     setError('');
     try {
-      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string }>('get_library_playlists', limit);
+      const result = await call<[], { playlists?: PlaylistEntry[]; error?: string }>('get_library_playlists');
       if (result.error) {
         setError(result.error);
       } else {
         setPlaylists(result.playlists ?? []);
-        setCurrentLimit(limit);
       }
     } catch (e) {
       setError('Failed to load playlists');
     }
     setLoading(false);
-  };
-
-  const handleLoadMore = async () => {
-    setLoadingMore(true);
-    try {
-      const newLimit = currentLimit + 25;
-      const result = await call<[number], { playlists?: PlaylistEntry[]; error?: string }>('get_library_playlists', newLimit);
-      if (!result.error) {
-        const fetched = result.playlists ?? [];
-        // If we didn't get any new playlists, there are no more
-        if (fetched.length <= playlists.length) {
-          setHasMore(false);
-        } else {
-          setPlaylists(fetched);
-          setCurrentLimit(newLimit);
-        }
-      }
-    } catch (e) {
-      // silently fail
-    }
-    setLoadingMore(false);
   };
 
   useEffect(() => { void fetchPlaylists(); }, []);
@@ -184,11 +159,6 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
           </Focusable>
         );
       })}
-      {hasMore && (
-        <ButtonItem onClick={() => { void handleLoadMore(); }}>
-          {loadingMore ? 'Loading...' : 'Load More'}
-        </ButtonItem>
-      )}
     </Section>
   );
 };
