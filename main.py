@@ -337,7 +337,10 @@ class Plugin:
             return {"rating": rating}
         except Exception as e:
             decky.logger.error(f"Failed to rate song {video_id}: {e}")
-            return {"error": str(e)}
+            error_msg = str(e)
+            if "Sign in" in error_msg or "sign in" in error_msg:
+                return {"error": "Session expired. Please re-authenticate in Settings."}
+            return {"error": error_msg}
 
     async def get_song_rating(self, video_id):
         # Return cached likeStatus from queue data
@@ -439,7 +442,10 @@ class Plugin:
             return {"playlists": result}
         except Exception as e:
             decky.logger.error(f"Failed to get library playlists: {e}")
-            return {"error": str(e)}
+            error_msg = str(e)
+            if "Sign in" in error_msg or "sign in" in error_msg or "twoColumnBrowseResultsRenderer" in error_msg:
+                return {"error": "Session expired. Please re-authenticate with fresh browser headers in Settings."}
+            return {"error": error_msg}
 
     # ── Search ─────────────────────────────────────────────────────
 
@@ -553,7 +559,7 @@ class Plugin:
 
             tracks = playlist_data.get("tracks", [])
             if not tracks:
-                return {"error": "Playlist is empty"}
+                return {"error": "Playlist is empty. If this is Liked Songs, try re-authenticating with fresh browser headers."}
 
             self.queue = []
             for t in tracks:
@@ -611,4 +617,7 @@ class Plugin:
             return result
         except Exception as e:
             decky.logger.error(f"Failed to load playlist {playlist_id}: {e}")
-            return {"error": str(e)}
+            error_msg = str(e)
+            if "Sign in" in error_msg or "sign in" in error_msg or "twoColumnBrowseResultsRenderer" in error_msg:
+                return {"error": "Session expired. Please re-authenticate with fresh browser headers in Settings."}
+            return {"error": error_msg}
