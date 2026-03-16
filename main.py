@@ -354,23 +354,31 @@ class Plugin:
 
     # ── Library ─────────────────────────────────────────────────────
 
-    async def get_library_playlists(self):
+    async def get_library_playlists(self, limit=25):
         if not self.ytmusic:
             return {"error": "Not authenticated"}
         try:
-            playlists = self.ytmusic.get_library_playlists(limit=50)
+            playlists = self.ytmusic.get_library_playlists(limit=limit)
             result = []
             # Liked Songs first
             result.append({
                 "playlistId": "LM",
                 "title": "Liked Songs",
                 "count": None,
+                "thumbnail": None,
             })
             for p in playlists:
+                pid = p.get("playlistId", "")
+                # Skip "Liked Music" (LM) since we manually add it above
+                if pid == "LM":
+                    continue
+                thumbnails = p.get("thumbnails", [])
+                thumb = thumbnails[0]["url"] if thumbnails else None
                 result.append({
-                    "playlistId": p.get("playlistId", ""),
+                    "playlistId": pid,
                     "title": p.get("title", "Unknown Playlist"),
                     "count": p.get("count"),
+                    "thumbnail": thumb,
                 })
             return {"playlists": result}
         except Exception as e:

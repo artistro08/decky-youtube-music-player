@@ -14,8 +14,16 @@ import { initAudio, destroyAudio } from './services/audioManager';
 
 const SETTINGS_ROUTE = '/youtube-music-settings';
 
+// Module-scoped tab setter — lets LibraryView switch to Player after loading a playlist
+let setActiveTabGlobal: ((tab: string) => void) | null = null;
+
 const TabsContainer = memo(() => {
   const [activeTab, setActiveTab] = useState<string>('player');
+
+  useEffect(() => {
+    setActiveTabGlobal = setActiveTab;
+    return () => { setActiveTabGlobal = null; };
+  }, []);
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number>(500);
 
@@ -77,7 +85,7 @@ const TabsContainer = memo(() => {
   const tabItems = useMemo(() => [
     { id: 'player', title: 'Player', content: <PlayerView /> },
     { id: 'queue', title: 'Queue', content: <QueueView /> },
-    { id: 'library', title: 'Library', content: <LibraryView /> },
+    { id: 'library', title: 'Library', content: <LibraryView onSwitchToPlayer={() => setActiveTab('player')} /> },
   ], []);
 
   return (
@@ -144,7 +152,7 @@ const PluginContentWrapper = () => {
         </Section>
         {activeTab === 'player' && <PlayerView />}
         {activeTab === 'queue' && <QueueView />}
-        {activeTab === 'library' && <LibraryView />}
+        {activeTab === 'library' && <LibraryView onSwitchToPlayer={() => setActiveTab('player')} />}
       </>
     );
   }
