@@ -92,65 +92,54 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
         const isLoading = loadingPlaylist === playlist.playlistId;
 
         return (
-          <Focusable key={playlist.playlistId}>
+          <Focusable
+            key={playlist.playlistId}
+            style={{ display: 'flex', alignItems: 'stretch', marginTop: '2px', marginBottom: '2px' }}
+          >
             <DialogButton
               style={{
-                width: '100%',
+                flex: 1,
                 textAlign: 'left',
                 height: 'auto',
-                minHeight: '48px',
-                padding: '8px 16px',
+                minHeight: '44px',
+                padding: '0',
                 display: 'flex',
                 flexDirection: 'row',
-                alignItems: 'center',
+                alignItems: 'stretch',
                 borderRadius: '0',
-                gap: '12px',
+                overflow: 'hidden',
                 opacity: isLoading ? 0.6 : 1,
               }}
               onClick={() => { if (!isLoading) void handlePlaylistClick(playlist.playlistId); }}
             >
-              {/* Thumbnail / Icon */}
-              {isLiked ? (
-                <div style={{
-                  width: '40px', height: '40px', flexShrink: 0,
-                  background: 'rgba(255, 80, 80, 0.15)',
-                  borderRadius: '4px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#ff5050',
-                }}>
-                  <FaHeart size={16} />
-                </div>
-              ) : playlist.thumbnail ? (
-                <img
-                  src={playlist.thumbnail}
-                  alt=""
-                  style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
-                />
-              ) : (
-                <div style={{
-                  width: '40px', height: '40px', flexShrink: 0,
-                  background: 'rgba(255,255,255,0.08)',
-                  borderRadius: '4px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--gpSystemLighterGrey)',
-                }}>
-                  <FaMusic size={16} />
-                </div>
-              )}
+              {/* Thumbnail */}
+              <div style={{ width: '62px', height: '62px', flexShrink: 0, alignSelf: 'center', position: 'relative', background: isLiked ? 'rgba(255, 80, 80, 0.15)' : 'rgba(255,255,255,0.05)' }}>
+                {isLiked ? (
+                  <div style={{ width: '62px', height: '62px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff5050' }}>
+                    <FaHeart size={22} />
+                  </div>
+                ) : playlist.thumbnail ? (
+                  <img
+                    src={playlist.thumbnail}
+                    alt=""
+                    style={{ width: '62px', height: '62px', objectFit: 'cover', display: 'block' }}
+                  />
+                ) : (
+                  <div style={{ width: '62px', height: '62px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gpSystemLighterGrey)' }}>
+                    <FaMusic size={18} />
+                  </div>
+                )}
+              </div>
 
               {/* Text */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontWeight: isLiked ? 'bold' : 'normal',
-                  fontSize: '14px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {isLoading ? 'Loading...' : playlist.title}
+              <div style={{ flex: 1, minWidth: 0, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ fontWeight: isLiked ? 'bold' : 'normal', fontSize: '13px', display: 'flex', alignItems: 'center', width: '100%', minWidth: 0 }}>
+                  <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', flex: 1, minWidth: 0, maskImage: 'linear-gradient(to right, black calc(100% - 20px), transparent 100%)' }}>
+                    {isLoading ? 'Loading...' : playlist.title}
+                  </span>
                 </div>
                 {playlist.count !== null && (
-                  <div style={{ fontSize: '11px', color: 'var(--gpSystemLighterGrey)', marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--gpSystemLighterGrey)', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                     {playlist.count} tracks
                   </div>
                 )}
