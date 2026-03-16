@@ -28,17 +28,19 @@ const PaddedButtonItem = (props: React.ComponentProps<typeof ButtonItem>) => {
   return <div ref={ref}><ButtonItem {...props} /></div>;
 };
 
+// Module-scoped — survives TabsContainer unmount/remount (QAM tab switches)
+let savedMinHeight = 0;
+
 const TabsContainer = memo(() => {
   const [activeTab, setActiveTab] = useState<string>('player');
   const containerRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number>(500);
+  const [height, setHeight] = useState<number>(savedMinHeight || 500);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     let scrollEl: HTMLElement | null = null;
     let prevOverflow = '';
-    let minHeight = 0;
 
     const recalcHeight = () => {
       if (!containerRef.current) return;
@@ -52,9 +54,9 @@ const TabsContainer = memo(() => {
         newHeight = window.innerHeight - containerRect.top;
       }
 
-      // Use initial height as minimum — prevents shrinking after QAM tab switches
-      if (minHeight === 0) minHeight = newHeight;
-      setHeight(Math.max(newHeight, minHeight));
+      // Store the first good height as minimum (module-scoped, survives remounts)
+      if (savedMinHeight === 0 && newHeight > 100) savedMinHeight = newHeight;
+      setHeight(Math.max(newHeight, savedMinHeight));
     };
 
     // Find the scroll ancestor once
@@ -69,14 +71,17 @@ const TabsContainer = memo(() => {
       el = el.parentElement;
     }
 
-    recalcHeight();
+    // Delay initial measurement to ensure DOM is fully laid out after remount
+    requestAnimationFrame(() => {
+      recalcHeight();
+    });
 
     if (scrollEl) {
       prevOverflow = scrollEl.style.overflowY;
       scrollEl.style.overflowY = 'hidden';
     }
 
-    // Recalculate when container or scroll ancestor resizes (e.g. QAM tab switch)
+    // Recalculate when container or scroll ancestor resizes
     const observer = new ResizeObserver(recalcHeight);
     if (scrollEl) observer.observe(scrollEl);
     observer.observe(containerRef.current);
