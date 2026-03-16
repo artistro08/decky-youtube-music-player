@@ -94,6 +94,41 @@ const RepeatButton = ({ repeat, onToggle }: { repeat: string; onToggle: () => vo
   );
 };
 
+const SearchButton = () => {
+  const [focused, setFocused] = useState(false);
+
+  return (
+    <Focusable
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    >
+      <DialogButton
+        style={{
+          height: '42px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          gap: '6px',
+          paddingLeft: '19px',
+          paddingRight: '19px',
+          borderRadius: '0',
+          color: 'white',
+          background: focused ? '#32373D' : '#0d141c',
+          animation: focused ? 'ytm-repeat-focus 0.3s ease' : 'none',
+          transition: 'background 0.2s ease',
+        }}
+        onClick={() => {
+          Navigation.CloseSideMenus();
+          Navigation.Navigate('/youtube-music-search');
+        }}
+      >
+        <FaSearch size={14} />
+        Search
+      </DialogButton>
+    </Focusable>
+  );
+};
+
 export const PlayerView = () => {
   const { track, isPlaying, shuffle: isShuffled, repeat, updateState } = usePlayer();
 
@@ -249,30 +284,7 @@ export const PlayerView = () => {
 
       {/* Search */}
       <Section>
-        <Focusable>
-          <DialogButton
-            style={{
-              height: '42px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              gap: '6px',
-              paddingLeft: '19px',
-              paddingRight: '19px',
-              borderRadius: '0',
-              color: 'white',
-              background: '#0d141c',
-              transition: 'background 0.2s ease',
-            }}
-            onClick={() => {
-              Navigation.CloseSideMenus();
-              Navigation.Navigate('/youtube-music-search');
-            }}
-          >
-            <FaSearch size={14} />
-            Search
-          </DialogButton>
-        </Focusable>
+        <SearchButton />
       </Section>
     </>
   );
