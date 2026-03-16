@@ -301,12 +301,20 @@ class Plugin:
             return {"error": "Not authenticated"}
         try:
             self.ytmusic.rate_song(video_id, rating)
+            # Update the cached likeStatus in the queue
+            for t in self.queue:
+                if t.get("videoId") == video_id:
+                    t["likeStatus"] = rating
             return {"rating": rating}
         except Exception as e:
             decky.logger.error(f"Failed to rate song {video_id}: {e}")
             return {"error": str(e)}
 
     async def get_song_rating(self, video_id):
+        # Return cached likeStatus from queue data
+        for t in self.queue:
+            if t.get("videoId") == video_id:
+                return {"rating": t.get("likeStatus", "INDIFFERENT")}
         return {"rating": "INDIFFERENT"}
 
     # ── Shuffle / Repeat ───────────────────────────────────────────
@@ -538,6 +546,7 @@ class Plugin:
                     "album": album_name,
                     "albumArt": album_art,
                     "duration": duration_seconds,
+                    "likeStatus": t.get("likeStatus", "INDIFFERENT"),
                 })
 
             self.queue = [t for t in self.queue if t["videoId"]]

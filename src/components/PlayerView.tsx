@@ -202,36 +202,25 @@ export const PlayerView = () => {
             flow-children="horizontal"
           >
             <DialogButton
-              style={{
-                ...btnBase,
-                height: '35px',
-                borderRadius: '4px 0 0 4px',
-                color: rating === 'DISLIKE' ? '#ff5050' : 'white',
-              }}
-              onClick={() => { void handleRate('DISLIKE'); }}
-            >
-              {rating === 'DISLIKE' ? <AiFillDislike size={18} /> : <AiOutlineDislike size={18} />}
-            </DialogButton>
-            <DialogButton
-              style={{
-                ...btnBase,
-                height: '35px',
-                borderRadius: '0 4px 4px 0',
-                borderLeft: '1px solid rgba(255,255,255,0.15)',
-                color: rating === 'LIKE' ? '#4caf50' : 'white',
-              }}
+              style={{ ...btnBase, height: '35px', borderRadius: '4px 0 0 4px' }}
               onClick={() => { void handleRate('LIKE'); }}
             >
               {rating === 'LIKE' ? <AiFillLike size={18} /> : <AiOutlineLike size={18} />}
             </DialogButton>
+            <DialogButton
+              style={{ ...btnBase, height: '35px', borderRadius: '0 4px 4px 0', borderLeft: '1px solid rgba(255,255,255,0.15)' }}
+              onClick={() => { void handleRate('DISLIKE'); }}
+            >
+              {rating === 'DISLIKE' ? <AiFillDislike size={18} /> : <AiOutlineDislike size={18} />}
+            </DialogButton>
           </Focusable>
         ) : (
           <>
-            <ButtonItem onClick={() => { void handleRate('DISLIKE'); }}>
-              {rating === 'DISLIKE' ? <AiFillDislike /> : <AiOutlineDislike />} Dislike
-            </ButtonItem>
             <ButtonItem onClick={() => { void handleRate('LIKE'); }}>
               {rating === 'LIKE' ? <AiFillLike /> : <AiOutlineLike />} Like
+            </ButtonItem>
+            <ButtonItem onClick={() => { void handleRate('DISLIKE'); }}>
+              {rating === 'DISLIKE' ? <AiFillDislike /> : <AiOutlineDislike />} Dislike
             </ButtonItem>
           </>
         )}
