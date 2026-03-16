@@ -56,8 +56,8 @@ export const QueueView = () => {
   if (loading) {
     return (
       <Section>
-        <div style={{ padding: '16px 12px', color: 'var(--gpSystemLighterGrey)', fontSize: '12px' }}>
-          Loading queue...
+        <div style={{ textAlign: 'center', padding: '16px', color: 'var(--gpSystemLighterGrey)' }}>
+          <div style={{ fontSize: '12px' }}>Loading queue...</div>
         </div>
       </Section>
     );
@@ -66,8 +66,12 @@ export const QueueView = () => {
   if (queue.length === 0) {
     return (
       <Section>
-        <div style={{ padding: '8px 12px', color: 'var(--gpSystemLighterGrey)', fontSize: '12px' }}>
-          Queue is empty — load a playlist from the Library tab
+        <div style={{ textAlign: 'center', padding: '16px', color: 'var(--gpSystemLighterGrey)' }}>
+          <div style={{ marginBottom: '8px' }}><FaMusic size={32} /></div>
+          <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Queue is Empty</div>
+          <div style={{ fontSize: '12px', lineHeight: '1.4' }}>
+            Load a playlist from the <strong>Library</strong> tab or use <strong>Search</strong> to find a song.
+          </div>
         </div>
       </Section>
     );

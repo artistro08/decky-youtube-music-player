@@ -117,9 +117,11 @@ const PluginContentWrapper = () => {
   if (!authenticated) {
     return (
       <Section>
-        <div style={{ padding: '16px', textAlign: 'center' }}>
-          <div style={{ color: 'var(--gpSystemLighterGrey)', fontSize: '13px', marginBottom: '12px' }}>
-            Not authenticated. Set up your YouTube Music credentials in Settings.
+        <div style={{ textAlign: 'center', padding: '16px', color: 'var(--gpSystemLighterGrey)' }}>
+          <div style={{ marginBottom: '8px' }}><FaMusic size={32} /></div>
+          <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Not Authenticated</div>
+          <div style={{ fontSize: '12px', lineHeight: '1.4', marginBottom: '12px' }}>
+            Set up your YouTube Music credentials in <strong>Settings</strong> to get started.
           </div>
           <ButtonItem onClick={() => {
             Navigation.CloseSideMenus();

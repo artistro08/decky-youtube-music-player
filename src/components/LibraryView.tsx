@@ -56,8 +56,8 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
   if (loading) {
     return (
       <Section>
-        <div style={{ padding: '16px 12px', color: 'var(--gpSystemLighterGrey)', fontSize: '12px' }}>
-          Loading playlists...
+        <div style={{ textAlign: 'center', padding: '16px', color: 'var(--gpSystemLighterGrey)' }}>
+          <div style={{ fontSize: '12px' }}>Loading playlists...</div>
         </div>
       </Section>
     );
@@ -66,8 +66,12 @@ export const LibraryView = ({ onSwitchToPlayer }: { onSwitchToPlayer?: () => voi
   if (playlists.length === 0 && !error) {
     return (
       <Section>
-        <div style={{ padding: '8px 12px', color: 'var(--gpSystemLighterGrey)', fontSize: '12px' }}>
-          No playlists found
+        <div style={{ textAlign: 'center', padding: '16px', color: 'var(--gpSystemLighterGrey)' }}>
+          <div style={{ marginBottom: '8px' }}><FaMusic size={32} /></div>
+          <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>No Playlists Found</div>
+          <div style={{ fontSize: '12px', lineHeight: '1.4' }}>
+            Create playlists on <strong>YouTube Music</strong> and they'll appear here.
+          </div>
         </div>
       </Section>
     );
