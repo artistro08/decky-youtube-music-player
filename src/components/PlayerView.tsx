@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { FaPause, FaRandom, FaMusic } from 'react-icons/fa';
 import { IoPlay, IoPlaySkipBack, IoPlaySkipForward } from 'react-icons/io5';
 import { MdRepeat, MdRepeatOne } from 'react-icons/md';
+import { AiOutlineLike, AiFillLike, AiOutlineDislike, AiFillDislike } from 'react-icons/ai';
 import { usePlayer } from '../context/PlayerContext';
 import { togglePlayback, playNext, playPrevious } from '../services/audioManager';
 import { Section } from './Section';
@@ -100,6 +101,35 @@ export const PlayerView = () => {
   const title = track?.title ?? 'Nothing playing';
   const artist = track?.artist ?? '';
 
+  const [rating, setRating] = useState<string>('INDIFFERENT');
+
+  useEffect(() => {
+    if (!track?.videoId) {
+      setRating('INDIFFERENT');
+      return;
+    }
+    void (async () => {
+      try {
+        const result = await call<[string], { rating: string }>('get_song_rating', track.videoId);
+        setRating(result.rating);
+      } catch {
+        setRating('INDIFFERENT');
+      }
+    })();
+  }, [track?.videoId]);
+
+  const handleRate = async (newRating: string) => {
+    if (!track?.videoId) return;
+    const targetRating = rating === newRating ? 'INDIFFERENT' : newRating;
+    const prevRating = rating;
+    setRating(targetRating);
+    try {
+      await call<[string, string], { rating?: string; error?: string }>('rate_song', track.videoId, targetRating);
+    } catch {
+      setRating(prevRating);
+    }
+  };
+
   const handleShuffleToggle = async () => {
     const result = await call<[], { shuffle: boolean }>('toggle_shuffle');
     updateState({ shuffle: result.shuffle });
@@ -158,6 +188,51 @@ export const PlayerView = () => {
             <ButtonItem onClick={() => { void playPrevious(); }}><IoPlaySkipBack /> Previous</ButtonItem>
             <ButtonItem onClick={() => { togglePlayback(); }}>{isPlaying ? <><FaPause /> Pause</> : <><IoPlay /> Play</>}</ButtonItem>
             <ButtonItem onClick={() => { void playNext(); }}><IoPlaySkipForward /> Next</ButtonItem>
+          </>
+        )}
+      </Section>
+      </div>
+
+      {/* Like / Dislike */}
+      <div style={{ marginBottom: '10px', paddingLeft: '5px', paddingRight: '5px' }}>
+      <Section noPull>
+        {DialogButton ? (
+          <Focusable
+            style={{ display: 'flex', marginTop: '4px', marginBottom: '4px' }}
+            flow-children="horizontal"
+          >
+            <DialogButton
+              style={{
+                ...btnBase,
+                height: '35px',
+                borderRadius: '4px 0 0 4px',
+                color: rating === 'DISLIKE' ? '#ff5050' : 'white',
+              }}
+              onClick={() => { void handleRate('DISLIKE'); }}
+            >
+              {rating === 'DISLIKE' ? <AiFillDislike size={18} /> : <AiOutlineDislike size={18} />}
+            </DialogButton>
+            <DialogButton
+              style={{
+                ...btnBase,
+                height: '35px',
+                borderRadius: '0 4px 4px 0',
+                borderLeft: '1px solid rgba(255,255,255,0.15)',
+                color: rating === 'LIKE' ? '#4caf50' : 'white',
+              }}
+              onClick={() => { void handleRate('LIKE'); }}
+            >
+              {rating === 'LIKE' ? <AiFillLike size={18} /> : <AiOutlineLike size={18} />}
+            </DialogButton>
+          </Focusable>
+        ) : (
+          <>
+            <ButtonItem onClick={() => { void handleRate('DISLIKE'); }}>
+              {rating === 'DISLIKE' ? <AiFillDislike /> : <AiOutlineDislike />} Dislike
+            </ButtonItem>
+            <ButtonItem onClick={() => { void handleRate('LIKE'); }}>
+              {rating === 'LIKE' ? <AiFillLike /> : <AiOutlineLike />} Like
+            </ButtonItem>
           </>
         )}
       </Section>

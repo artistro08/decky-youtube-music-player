@@ -294,6 +294,21 @@ class Plugin:
         """Return current volume (0-100 for frontend)."""
         return {"volume": self.volume * 100}
 
+    # ── Like / Dislike ──────────────────────────────────────────────
+
+    async def rate_song(self, video_id, rating):
+        if not self.ytmusic:
+            return {"error": "Not authenticated"}
+        try:
+            self.ytmusic.rate_song(video_id, rating)
+            return {"rating": rating}
+        except Exception as e:
+            decky.logger.error(f"Failed to rate song {video_id}: {e}")
+            return {"error": str(e)}
+
+    async def get_song_rating(self, video_id):
+        return {"rating": "INDIFFERENT"}
+
     # ── Shuffle / Repeat ───────────────────────────────────────────
 
     async def toggle_shuffle(self):
