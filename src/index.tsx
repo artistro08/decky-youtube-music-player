@@ -116,7 +116,7 @@ const PluginContentWrapper = () => {
   // If not authenticated, prompt user to go to settings
   if (!authenticated) {
     return (
-      <Section>
+      <div>
         <div style={{ textAlign: 'center', padding: '24px 32px 12px', color: 'var(--gpSystemLighterGrey)' }}>
           <div style={{ marginBottom: '8px' }}><FaMusic size={32} /></div>
           <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Not Authenticated</div>
@@ -124,13 +124,15 @@ const PluginContentWrapper = () => {
             Set up your YouTube Music credentials in <strong>Settings</strong> to get started.
           </div>
         </div>
-        <ButtonItem onClick={() => {
-          Navigation.CloseSideMenus();
-          Navigation.Navigate(SETTINGS_ROUTE);
-        }}>
-          Open Settings
-        </ButtonItem>
-      </Section>
+        <div style={{ padding: '0 16px' }}>
+          <ButtonItem onClick={() => {
+            Navigation.CloseSideMenus();
+            Navigation.Navigate(SETTINGS_ROUTE);
+          }}>
+            Open Settings
+          </ButtonItem>
+        </div>
+      </div>
     );
   }
 
