@@ -1,6 +1,6 @@
 import { ButtonItem, DialogButton, TextField, Focusable, Navigation, QuickAccessTab } from '@decky/ui';
 import { call } from '@decky/api';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FaMusic } from 'react-icons/fa';
 import { playTrack, type TrackInfo } from '../services/audioManager';
 
@@ -11,6 +11,15 @@ interface SearchResult {
   albumArt: string;
   duration: string;
 }
+
+const PaddedSearchButton = (props: React.ComponentProps<typeof ButtonItem>) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const first = ref.current?.firstElementChild as HTMLElement | null;
+    if (first) first.style.padding = '10px';
+  }, []);
+  return <div ref={ref} style={{ marginTop: '8px', marginLeft: '-10px', marginRight: '-10px' }}><ButtonItem {...props} /></div>;
+};
 
 export const SearchPage = () => {
   const [query, setQuery] = useState('');
@@ -67,11 +76,9 @@ export const SearchPage = () => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div style={{ marginTop: '8px', marginLeft: '-10px', marginRight: '-10px', padding: '0 10px' }}>
-          <ButtonItem onClick={() => { void handleSearch(); }}>
-            {searching ? 'Searching...' : 'Search'}
-          </ButtonItem>
-        </div>
+        <PaddedSearchButton onClick={() => { void handleSearch(); }}>
+          {searching ? 'Searching...' : 'Search'}
+        </PaddedSearchButton>
       </div>
 
       {/* Scrollable results area */}
