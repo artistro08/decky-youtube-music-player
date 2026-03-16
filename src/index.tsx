@@ -35,27 +35,50 @@ const TabsContainer = memo(() => {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const containerRect = containerRef.current.getBoundingClientRect();
+
     let scrollEl: HTMLElement | null = null;
+    let prevOverflow = '';
+
+    const recalcHeight = () => {
+      if (!containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+
+      if (scrollEl) {
+        const elRect = scrollEl.getBoundingClientRect();
+        setHeight(elRect.bottom - containerRect.top);
+      } else {
+        setHeight(window.innerHeight - containerRect.top);
+      }
+    };
+
+    // Find the scroll ancestor once
     let el: Element | null = containerRef.current.parentElement;
     while (el && el !== document.documentElement) {
       const style = window.getComputedStyle(el);
       const oy = style.overflowY;
       if (oy === 'scroll' || oy === 'auto' || oy === 'overlay') {
-        const elRect = el.getBoundingClientRect();
-        setHeight(elRect.bottom - containerRect.top);
         scrollEl = el as HTMLElement;
         break;
       }
       el = el.parentElement;
     }
-    if (!scrollEl) {
-      setHeight(window.innerHeight - containerRect.top);
-      return;
+
+    recalcHeight();
+
+    if (scrollEl) {
+      prevOverflow = scrollEl.style.overflowY;
+      scrollEl.style.overflowY = 'hidden';
     }
-    const prev = scrollEl.style.overflowY;
-    scrollEl.style.overflowY = 'hidden';
-    return () => { (scrollEl as HTMLElement).style.overflowY = prev; };
+
+    // Recalculate when container or scroll ancestor resizes (e.g. QAM tab switch)
+    const observer = new ResizeObserver(recalcHeight);
+    if (scrollEl) observer.observe(scrollEl);
+    observer.observe(containerRef.current);
+
+    return () => {
+      observer.disconnect();
+      if (scrollEl) scrollEl.style.overflowY = prevOverflow;
+    };
   }, []);
 
   useEffect(() => {
