@@ -87,32 +87,36 @@ class Plugin:
     # ── Streaming URL ──────────────────────────────────────────────
 
     def _get_streaming_url(self, video_id):
-        """Fetch the best audio streaming URL for a video."""
-        if not self.ytmusic:
-            return None
+        """Fetch the best audio streaming URL for a video using yt-dlp.
+        yt-dlp handles signature deciphering that ytmusicapi cannot."""
         try:
-            song_data = self.ytmusic.get_song(video_id)
-            streaming_data = song_data.get("streamingData", {})
-            adaptive_formats = streaming_data.get("adaptiveFormats", [])
+            import yt_dlp
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'format': 'bestaudio[ext=m4a]/bestaudio',
+                'skip_download': True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(
+                    f'https://music.youtube.com/watch?v={video_id}',
+                    download=False,
+                )
+                url = info.get('url')
+                if not url:
+                    # Try formats list
+                    formats = info.get('formats', [])
+                    audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') in ('none', None)]
+                    if audio_formats:
+                        audio_formats.sort(key=lambda f: f.get('abr', 0) or 0, reverse=True)
+                        url = audio_formats[0].get('url')
 
-            audio_formats = [f for f in adaptive_formats if f.get("mimeType", "").startswith("audio/")]
-
-            if not audio_formats:
-                decky.logger.warning(f"No audio formats found for {video_id}")
-                return None
-
-            mp4_formats = [f for f in audio_formats if "mp4" in f.get("mimeType", "")]
-            webm_formats = [f for f in audio_formats if "webm" in f.get("mimeType", "")]
-
-            candidates = mp4_formats or webm_formats or audio_formats
-            candidates.sort(key=lambda f: f.get("bitrate", 0), reverse=True)
-
-            url = candidates[0].get("url")
-            if not url:
-                decky.logger.warning(f"No URL in format for {video_id}")
-                return None
-
-            return url
+                if url:
+                    decky.logger.info(f"Got streaming URL for {video_id}")
+                    return url
+                else:
+                    decky.logger.warning(f"No audio URL found for {video_id}")
+                    return None
         except Exception as e:
             decky.logger.error(f"Failed to get streaming URL for {video_id}: {e}")
             return None
