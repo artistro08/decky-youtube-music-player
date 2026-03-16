@@ -1,20 +1,9 @@
 import decky
 import json
 import os
-import sys
 import random
 
-# Ensure our py_modules takes priority over system paths (Decky appends, we need insert)
-# This fixes missing stdlib modules like xml.etree in Decky's sandboxed Python
-_py_modules = os.path.join(decky.DECKY_PLUGIN_DIR, "py_modules")
-if _py_modules not in sys.path:
-    sys.path.insert(0, _py_modules)
-
-# Clear any cached partial xml module so Python finds our complete version
-for _key in list(sys.modules.keys()):
-    if _key == 'xml' or _key.startswith('xml.'):
-        del sys.modules[_key]
-
+_PY_MODULES = os.path.join(decky.DECKY_PLUGIN_DIR, "py_modules")
 BROWSER_AUTH_FILE = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "browser.json")
 
 class Plugin:
@@ -99,36 +88,39 @@ class Plugin:
     # ── Streaming URL ──────────────────────────────────────────────
 
     def _get_streaming_url(self, video_id):
-        """Fetch the best audio streaming URL for a video using yt-dlp.
-        yt-dlp handles signature deciphering that ytmusicapi cannot."""
+        """Fetch the best audio streaming URL using yt-dlp as a subprocess.
+        Runs in a separate Python process to avoid Decky sandbox import issues."""
+        import subprocess
         try:
-            import yt_dlp
-            ydl_opts = {
-                'quiet': True,
-                'no_warnings': True,
-                'format': 'bestaudio[ext=m4a]/bestaudio',
-                'skip_download': True,
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(
-                    f'https://music.youtube.com/watch?v={video_id}',
-                    download=False,
-                )
-                url = info.get('url')
-                if not url:
-                    # Try formats list
-                    formats = info.get('formats', [])
-                    audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') in ('none', None)]
-                    if audio_formats:
-                        audio_formats.sort(key=lambda f: f.get('abr', 0) or 0, reverse=True)
-                        url = audio_formats[0].get('url')
+            env = os.environ.copy()
+            # Add our py_modules to PYTHONPATH so the subprocess can find yt-dlp
+            env['PYTHONPATH'] = _PY_MODULES + ':' + env.get('PYTHONPATH', '')
 
-                if url:
-                    decky.logger.info(f"Got streaming URL for {video_id}")
-                    return url
-                else:
-                    decky.logger.warning(f"No audio URL found for {video_id}")
-                    return None
+            result = subprocess.run(
+                [
+                    'python3', '-m', 'yt_dlp',
+                    '--print', 'urls',
+                    '-f', 'bestaudio[ext=m4a]/bestaudio',
+                    '--no-warnings',
+                    '-q',
+                    f'https://music.youtube.com/watch?v={video_id}',
+                ],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=30,
+            )
+
+            url = result.stdout.strip()
+            if url and url.startswith('http'):
+                decky.logger.info(f"Got streaming URL for {video_id}")
+                return url
+            else:
+                decky.logger.warning(f"yt-dlp returned no URL for {video_id}. stderr: {result.stderr[:200]}")
+                return None
+        except subprocess.TimeoutExpired:
+            decky.logger.error(f"yt-dlp timed out for {video_id}")
+            return None
         except Exception as e:
             decky.logger.error(f"Failed to get streaming URL for {video_id}: {e}")
             return None
@@ -335,33 +327,27 @@ class Plugin:
         except Exception as e:
             results["library_playlists"] = f"FAIL: {str(e)[:200]}"
 
-        # Test yt-dlp URL extraction
+        # Test yt-dlp URL extraction via subprocess
         try:
-            import yt_dlp
-            ydl_opts = {
-                'quiet': True,
-                'no_warnings': True,
-                'format': 'bestaudio[ext=m4a]/bestaudio',
-                'skip_download': True,
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(
+            import subprocess
+            env = os.environ.copy()
+            env['PYTHONPATH'] = _PY_MODULES + ':' + env.get('PYTHONPATH', '')
+            proc = subprocess.run(
+                [
+                    'python3', '-m', 'yt_dlp',
+                    '--print', 'urls',
+                    '-f', 'bestaudio[ext=m4a]/bestaudio',
+                    '--no-warnings', '-q',
                     f'https://music.youtube.com/watch?v={video_id}',
-                    download=False,
-                )
-                results["ytdlp_title"] = info.get("title", "")
-                results["ytdlp_url"] = (info.get("url", "") or "")[:100] + "..." if info.get("url") else "NO URL"
-                results["ytdlp_format"] = info.get("format", "")
-                results["ytdlp_ext"] = info.get("ext", "")
-                formats = info.get("formats", [])
-                results["ytdlp_total_formats"] = len(formats)
-                audio_fmts = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') in ('none', None)]
-                results["ytdlp_audio_formats"] = len(audio_fmts)
-                if audio_fmts:
-                    best = audio_fmts[-1]
-                    results["ytdlp_best_audio_url"] = (best.get("url", "") or "")[:100] + "..."
-                    results["ytdlp_best_audio_ext"] = best.get("ext", "")
-                    results["ytdlp_best_audio_abr"] = best.get("abr", 0)
+                ],
+                capture_output=True, text=True, env=env, timeout=30,
+            )
+            url = proc.stdout.strip()
+            if url and url.startswith('http'):
+                results["ytdlp_url"] = url[:100] + "..."
+            else:
+                results["ytdlp_stdout"] = proc.stdout[:200]
+                results["ytdlp_stderr"] = proc.stderr[:300]
         except Exception as e:
             results["ytdlp_error"] = str(e)[:300]
 
