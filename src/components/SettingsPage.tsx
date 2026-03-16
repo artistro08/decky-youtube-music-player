@@ -1,4 +1,4 @@
-import { ButtonItem, DialogButton, Focusable, Navigation } from '@decky/ui';
+import { ButtonItem, DialogButton, TextField, Focusable, Navigation } from '@decky/ui';
 import { call } from '@decky/api';
 import { useEffect, useState } from 'react';
 import { Section } from './Section';
@@ -9,7 +9,7 @@ type AuthState = {
 
 export const SettingsPage = () => {
   const [authState, setAuthState] = useState<AuthState | null>(null);
-  const [headersRaw, setHeadersRaw] = useState('');
+  const [filePath, setFilePath] = useState('/home/deck/headers.txt');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -20,21 +20,20 @@ export const SettingsPage = () => {
     })();
   }, []);
 
-  const handleSaveHeaders = async () => {
-    if (!headersRaw.trim()) {
-      setError('Please paste your request headers.');
+  const handleLoadFile = async () => {
+    if (!filePath.trim()) {
+      setError('Please enter a file path.');
       return;
     }
     setError('');
     setSaving(true);
     try {
-      const result = await call<[string], { success?: boolean; error?: string }>('save_browser_headers', headersRaw.trim());
+      const result = await call<[string], { success?: boolean; error?: string }>('load_headers_from_file', filePath.trim());
       if (result.error) {
         setError(result.error);
       } else {
         const state = await call<[], AuthState>('get_auth_state');
         setAuthState(state);
-        setHeadersRaw('');
       }
     } catch (e) {
       setError(String(e));
@@ -90,43 +89,31 @@ export const SettingsPage = () => {
           </Focusable>
         </Section>
       ) : (
-        /* Not authenticated — show instructions + header paste */
+        /* Not authenticated — show instructions + file path */
         <>
           <Section title="Setup Instructions">
             <div style={{ padding: '8px 16px', fontSize: '12px', color: 'var(--gpSystemLighterGrey)', lineHeight: '1.5' }}>
-              <div style={{ marginBottom: '8px' }}>1. Open a browser and go to <span style={{ color: 'white' }}>music.youtube.com</span></div>
+              <div style={{ marginBottom: '8px' }}>1. On your PC, open a browser and go to <span style={{ color: 'white' }}>music.youtube.com</span></div>
               <div style={{ marginBottom: '8px' }}>2. Log in to your account</div>
               <div style={{ marginBottom: '8px' }}>3. Open Developer Tools (F12) → Network tab</div>
               <div style={{ marginBottom: '8px' }}>4. Click around in YouTube Music (e.g. click Library)</div>
-              <div style={{ marginBottom: '8px' }}>5. Find a request to <span style={{ color: 'white' }}>/browse</span> with status 200</div>
-              <div style={{ marginBottom: '8px' }}>6. Copy the request headers (Firefox: right-click → Copy → Copy Request Headers)</div>
-              <div>7. Paste them below and click Save</div>
+              <div style={{ marginBottom: '8px' }}>5. Find a POST request to <span style={{ color: 'white' }}>/browse</span> with status 200</div>
+              <div style={{ marginBottom: '8px' }}>6. Copy the request headers to a text file</div>
+              <div style={{ marginBottom: '8px' }}>   Firefox: right-click → Copy → Copy Request Headers</div>
+              <div style={{ marginBottom: '8px' }}>7. Transfer the text file to your Steam Deck</div>
+              <div>8. Enter the file path below and click Load</div>
             </div>
           </Section>
 
-          <Section title="Request Headers">
+          <Section title="Headers File Path">
             <div style={{ padding: '8px 16px' }}>
-              <textarea
-                value={headersRaw}
-                onChange={(e) => setHeadersRaw(e.target.value)}
-                placeholder="Paste request headers here..."
-                style={{
-                  width: '100%',
-                  minHeight: '120px',
-                  fontFamily: 'monospace',
-                  fontSize: '11px',
-                  background: 'rgba(255,255,255,0.05)',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: '4px',
-                  padding: '8px',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                }}
+              <TextField
+                value={filePath}
+                onChange={(e) => setFilePath(e.target.value)}
               />
               <div style={{ marginTop: '8px' }}>
-                <ButtonItem onClick={() => void handleSaveHeaders()}>
-                  {saving ? 'Saving...' : 'Save & Connect'}
+                <ButtonItem onClick={() => void handleLoadFile()}>
+                  {saving ? 'Loading...' : 'Load & Connect'}
                 </ButtonItem>
               </div>
             </div>

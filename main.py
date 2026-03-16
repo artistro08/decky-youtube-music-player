@@ -46,14 +46,23 @@ class Plugin:
             "authenticated": self.authenticated,
         }
 
-    async def save_browser_headers(self, headers_raw: str):
-        """Save browser request headers. Called from frontend settings page.
+    async def load_headers_from_file(self, file_path: str):
+        """Read browser request headers from a text file on the Deck.
         Uses ytmusicapi.setup() to parse raw headers into browser.json."""
         try:
+            if not os.path.exists(file_path):
+                return {"error": f"File not found: {file_path}"}
+
+            with open(file_path, "r") as f:
+                headers_raw = f.read()
+
+            if not headers_raw.strip():
+                return {"error": "File is empty"}
+
             from ytmusicapi import setup
             os.makedirs(decky.DECKY_PLUGIN_SETTINGS_DIR, exist_ok=True)
             setup(filepath=BROWSER_AUTH_FILE, headers_raw=headers_raw)
-            decky.logger.info("Browser headers saved")
+            decky.logger.info(f"Browser headers loaded from {file_path}")
 
             # Re-initialize ytmusicapi
             self._try_init_ytmusic()
@@ -63,7 +72,7 @@ class Plugin:
             else:
                 return {"error": "Headers saved but initialization failed. Check that the headers are correct."}
         except Exception as e:
-            decky.logger.error(f"Failed to save browser headers: {e}")
+            decky.logger.error(f"Failed to load headers from file: {e}")
             return {"error": str(e)}
 
     async def sign_out(self):
